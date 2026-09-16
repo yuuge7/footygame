@@ -1,0 +1,38 @@
+# --- Build output ---
+build/
+.gradle/
+.kotlin/
+.externalNativeBuild/
+.cxx/
+captures/
+*.apk
+*.aab
+*.ap_
+*.dex
+output-metadata.json
+
+# --- Local configuration ---
+local.properties
+
+# --- Release signing: never commit ---
+*.jks
+*.keystore
+keystore.properties
+
+# --- IDEs ---
+*.iml
+.idea/*
+!.idea/codeStyles/
+.vscode/
+.fleet/
+
+# --- Logs, dumps, OS files ---
+*.log
+*.hprof
+.DS_Store
+Thumbs.db
+
+# --- Docs: only the README is published ---
+*.md
+!README.md
+.claude/

@@ -1,0 +1,267 @@
+<resources>
+    <string name="app_name">Footy Draft</string>
+
+    <!-- Menu -->
+    <string name="menu_title_top">Footy</string>
+    <string name="menu_title_bottom">Draft</string>
+    <string name="menu_tagline">Spin legendary squads. Draft an XI. Win every match.</string>
+    <string name="menu_choose">Choose a challenge</string>
+    <string name="menu_how_to_play">How to play</string>
+    <string name="record_none">No runs yet</string>
+    <string name="record_best">Best %1$d-%2$d-%3$d</string>
+    <plurals name="record_perfect">
+        <item quantity="one">%d perfect</item>
+        <item quantity="other">%d perfect</item>
+    </plurals>
+    <plurals name="record_trophies">
+        <item quantity="one">%d trophy</item>
+        <item quantity="other">%d trophies</item>
+    </plurals>
+
+    <string name="mode_epl_title">Premier League</string>
+    <string name="mode_epl_description">38 league matches against today\'s top flight.</string>
+    <string name="mode_ucl_title">Champions League</string>
+    <string name="mode_ucl_description">League phase, two-legged knockouts, one final.</string>
+    <string name="mode_wc_title">World Cup</string>
+    <string name="mode_wc_description">Legendary nations only. Groups, knockouts, the final.</string>
+    <string name="mode_fac_title">FA Cup</string>
+    <string name="mode_fac_description">Start in the extra preliminary round. Finish at Wembley.</string>
+
+    <string name="how_to_play_title">How to play</string>
+    <string name="how_to_play_step_1">Choose a challenge, then set your formation, difficulty, era and extras.</string>
+    <string name="how_to_play_step_2">Squad first: each spin lands on a legendary squad and you draft one player. Position first: pick a slot, then spin for it.</string>
+    <string name="how_to_play_step_3">Stuck with a squad? Easy gives you 3 re-spins, Normal 1, Hard none.</string>
+    <string name="how_to_play_step_4">Players from the same club or nation add chemistry, which lifts your whole team.</string>
+    <string name="how_to_play_step_5">Appoint a gaffer, survive the January window and win every match for a perfect run.</string>
+    <string name="action_got_it">Got it</string>
+
+    <!-- Setup -->
+    <string name="setup_title">Set up your draft</string>
+    <string name="setup_section_formation">Formation</string>
+    <string name="setup_section_difficulty">Difficulty</string>
+    <string name="setup_section_ratings">Show ratings</string>
+    <string name="setup_section_style">Draft mode</string>
+    <string name="setup_section_rating_mode">Player ratings</string>
+    <string name="setup_section_era">Era</string>
+    <string name="setup_section_advanced">Advanced</string>
+    <string name="setup_start">Start draft</string>
+    <string name="cd_show_advanced">Show advanced options</string>
+    <string name="cd_hide_advanced">Hide advanced options</string>
+
+    <string name="formation_desc_433">Attacking with width. Three forwards create constant threat.</string>
+    <string name="formation_desc_442">Classic balance: two strikers and two banks of four.</string>
+    <string name="formation_desc_4231">A double pivot shields the back four behind a creative trio.</string>
+    <string name="formation_desc_451">Crowd the midfield, win the ball and break with one striker.</string>
+    <string name="formation_desc_343">Three at the back and a front three that never stops pressing.</string>
+    <string name="formation_desc_352">Wing-backs give the width while two strikers stay central.</string>
+    <string name="formation_desc_541">Five defenders and four midfielders. Hard to break down.</string>
+    <string name="formation_desc_41212">The narrow diamond: a holder, two runners and a No. 10 behind two strikers.</string>
+    <string name="formation_desc_4411">A second striker drops in to link midfield and attack.</string>
+    <string name="formation_desc_532">A solid back five with two strikers up top.</string>
+    <string name="formation_desc_3412">Wing-backs stretch the pitch while a No. 10 feeds two strikers.</string>
+    <string name="formation_desc_4222">Two holders, two inside forwards and two strikers in a box.</string>
+
+    <string name="difficulty_easy">Easy</string>
+    <string name="difficulty_easy_detail">3 re-spins</string>
+    <string name="difficulty_normal">Normal</string>
+    <string name="difficulty_normal_detail">1 re-spin</string>
+    <string name="difficulty_hard">Hard</string>
+    <string name="difficulty_hard_detail">No re-spins · ratings hidden</string>
+
+    <string name="ratings_on">On</string>
+    <string name="ratings_on_detail">Player ratings visible</string>
+    <string name="ratings_off">Off</string>
+    <string name="ratings_off_detail">Blind mode: trust your gut</string>
+    <string name="ratings_hard_note">Hard always hides ratings until your XI is complete.</string>
+
+    <string name="style_squad_first">Squad first</string>
+    <string name="style_squad_first_detail">Spin a squad, pick anyone, choose their position</string>
+    <string name="style_position_first">Position first</string>
+    <string name="style_position_first_detail">Pick a slot, then spin for a squad to fill it</string>
+
+    <string name="rating_mode_season">Season</string>
+    <string name="rating_mode_season_detail">Players as they were that season</string>
+    <string name="rating_mode_prime">Prime</string>
+    <string name="rating_mode_prime_detail">Every player at their career best</string>
+
+    <string name="era_all_time">All-time</string>
+    <string name="era_2000s">2000s+</string>
+    <string name="era_2010s">2010s+</string>
+    <string name="era_modern">Modern (2016+)</string>
+    <string name="era_seasons">%1$d of %2$d seasons</string>
+    <string name="era_tournaments">%1$d of %2$d tournaments</string>
+    <string name="era_hint">Only squads from this range can be spun. Narrow it to draft from an era you know.</string>
+    <string name="era_too_narrow">Widen the range. A draft needs at least %1$d squads and this range has %2$d.</string>
+    <string name="cd_era_range">Era from %1$s to %2$s</string>
+
+    <string name="advanced_managers">Managers</string>
+    <string name="advanced_managers_detail">After the draft, appoint a gaffer. Each one changes how your team plays.</string>
+    <string name="advanced_europe">European nights</string>
+    <string name="advanced_europe_detail">Finish in the top seven and your XI plays on in Europe.</string>
+    <string name="advanced_january">January transfer window</string>
+    <string name="advanced_january_detail">At halfway, gamble on one January event. It can help or hurt. No undo.</string>
+
+    <!-- Draft -->
+    <string name="draft_pick_progress">Pick %1$d of %2$d</string>
+    <string name="draft_complete_progress">XI complete</string>
+    <string name="stat_overall">OVR</string>
+    <string name="stat_attack">ATT</string>
+    <string name="stat_defence">DEF</string>
+    <string name="stat_chemistry">CHEM</string>
+    <string name="rating_hidden">\?</string>
+    <string name="draft_pick_player">Pick a player</string>
+    <string name="draft_pick_for_slot">Pick your %1$s</string>
+    <string name="draft_respin">Re-spin</string>
+    <plurals name="draft_respins_left">
+        <item quantity="one">%d left</item>
+        <item quantity="other">%d left</item>
+    </plurals>
+    <string name="draft_spin_label">This spin</string>
+    <string name="draft_spin_for_slot">Spin for your %1$s</string>
+    <string name="draft_choose_slot">Tap a slot to spin for it</string>
+    <string name="draft_choose_slot_detail">The spin is locked to that slot. Re-spins keep the same slot.</string>
+    <string name="draft_xi_ready">Your XI is ready</string>
+    <string name="draft_appoint_manager">Appoint your gaffer</string>
+    <string name="draft_manager_appointed">Gaffer: %1$s</string>
+    <string name="draft_play_epl">Play the season</string>
+    <string name="draft_play_ucl">Play the campaign</string>
+    <string name="draft_play_wc">Play the tournament</string>
+    <string name="draft_play_fac">Play the cup run</string>
+    <string name="draft_sheet_hint">Tap a player, or tap a position to choose where they play.</string>
+    <string name="draft_sheet_slot_hint">Choosing your %1$s</string>
+    <string name="draft_show_whole_squad">Show whole squad</string>
+    <string name="draft_in_xi">In your XI</string>
+    <string name="draft_no_slot">No open slot</string>
+    <string name="draft_nobody_fits">Nobody in this squad can play %1$s. Pick another slot or re-spin.</string>
+    <string name="draft_no_squads">No squad has a player for your open slots.</string>
+    <string name="draft_leave_title">Leave this draft?</string>
+    <string name="draft_leave_body">Your picks will be lost.</string>
+    <string name="draft_leave_confirm">Leave</string>
+    <string name="draft_leave_cancel">Keep drafting</string>
+    <string name="position_gk">Goalkeepers</string>
+    <string name="position_def">Defenders</string>
+    <string name="position_mid">Midfielders</string>
+    <string name="position_att">Forwards</string>
+
+    <string name="trait_attacking">Attacking</string>
+    <string name="trait_attacking_detail">More goals at the other end.</string>
+    <string name="trait_defensive">Defensive</string>
+    <string name="trait_defensive_detail">Fewer goals conceded.</string>
+    <string name="trait_big_games">Big-game</string>
+    <string name="trait_big_games_detail">Lifts the team against top sides and in knockouts.</string>
+    <string name="trait_man_manager">Man-manager</string>
+    <string name="trait_man_manager_detail">Chemistry counts double.</string>
+    <string name="trait_tactician">Tactician</string>
+    <string name="trait_tactician_detail">A small lift in every match.</string>
+
+    <!-- Results -->
+    <string name="run_skip">Skip</string>
+    <string name="run_wins">Won</string>
+    <string name="run_draws">Drawn</string>
+    <string name="run_losses">Lost</string>
+    <string name="run_progress">%1$d of %2$d played</string>
+    <string name="run_perfect_so_far">Perfect so far</string>
+    <string name="run_perfect_over">Perfect run over</string>
+    <string name="stage_matchday">Matchday %1$d</string>
+    <string name="stage_league_phase">League phase · MD %1$d</string>
+    <string name="stage_league_phase_short">the league phase</string>
+    <string name="stage_group">Group match %1$d</string>
+    <string name="stage_group_short">the group stage</string>
+    <string name="stage_playoff">Knockout play-off</string>
+    <string name="stage_round_of_32">Round of 32</string>
+    <string name="stage_round_of_16">Round of 16</string>
+    <string name="stage_quarter_final">Quarter-final</string>
+    <string name="stage_semi_final">Semi-final</string>
+    <string name="stage_final">Final</string>
+    <string name="stage_extra_preliminary">Extra preliminary round</string>
+    <string name="stage_preliminary">Preliminary round</string>
+    <string name="stage_qualifying">Qualifying round %1$d</string>
+    <string name="stage_first_round">First round</string>
+    <string name="stage_second_round">Second round</string>
+    <string name="stage_third_round">Third round</string>
+    <string name="stage_fourth_round">Fourth round</string>
+    <string name="stage_fifth_round">Fifth round</string>
+    <string name="stage_with_leg">%1$s · Leg %2$d</string>
+    <string name="venue_home_long">Home</string>
+    <string name="venue_away_long">Away</string>
+    <string name="venue_neutral_long">Neutral</string>
+    <string name="score_aet">aet</string>
+    <string name="score_penalties">%1$d-%2$d pens</string>
+    <string name="score_aggregate">agg %1$d-%2$d</string>
+    <string name="result_win">W</string>
+    <string name="result_draw">D</string>
+    <string name="result_loss">L</string>
+
+    <string name="verdict_perfect">%1$s. Perfect.</string>
+    <string name="verdict_champions">Champions</string>
+    <string name="verdict_league_champions">Champions with %1$d points</string>
+    <string name="verdict_league_finish">Finished %1$s with %2$d points</string>
+    <string name="verdict_out_in">Out in %1$s</string>
+    <string name="verdict_knocked_out">Knocked out in the %1$s</string>
+    <string name="verdict_beaten_by">Beaten by %1$s.</string>
+    <string name="verdict_first_dropped">Perfect run ended: %1$s, %2$s against %3$s.</string>
+    <string name="verdict_perfect_detail">Every match won. Frame this XI.</string>
+    <string name="verdict_manager">Gaffer · %1$s · %2$s</string>
+    <string name="new_best">New best</string>
+
+    <string name="january_title">January transfer window</string>
+    <string name="january_body">Halfway there at %1$d-%2$d-%3$d. Pick one gamble. There\'s no undo.</string>
+    <string name="january_row_label">January window</string>
+    <string name="january_marquee">Marquee signing</string>
+    <string name="january_marquee_detail">Break the bank for a star. Could transform your season, or flop.</string>
+    <string name="january_loan">Loan a prospect</string>
+    <string name="january_loan_detail">Low risk. Fresh legs might lift everyone.</string>
+    <string name="january_sell">Sell your star</string>
+    <string name="january_sell_detail">Cash in on your best player and hope the squad rallies.</string>
+    <string name="january_fitness">New fitness coach</string>
+    <string name="january_fitness_detail">A new regime: fewer injuries, or a backfire.</string>
+    <string name="january_marquee_hit">%1$s joined and replaced %2$s.</string>
+    <string name="january_marquee_flop">%1$s arrived for big money and never settled.</string>
+    <string name="january_marquee_generic_hit">A star arrived and lifted the attack.</string>
+    <string name="january_marquee_generic_flop">The big move collapsed and unsettled the squad.</string>
+    <string name="january_loan_hit">The loanee brought fresh legs and everyone lifted.</string>
+    <string name="january_loan_miss">The loanee barely played.</string>
+    <string name="january_sell_hit">Sold %1$s. %2$s came in and the squad rallied.</string>
+    <string name="january_sell_miss">Sold %1$s. %2$s came in and the fans turned on the board.</string>
+    <string name="january_sell_fell_through_hit">The sale fell through, but the squad rallied.</string>
+    <string name="january_sell_fell_through_miss">The sale fell through and unsettled the squad.</string>
+    <string name="january_fitness_hit">Fewer injuries and fewer late goals conceded.</string>
+    <string name="january_fitness_miss">The new regime backfired and injuries piled up.</string>
+
+    <string name="europe_title">European nights</string>
+    <string name="competition_champions_league">Champions League</string>
+    <string name="competition_europa_league">Europa League</string>
+    <string name="competition_conference_league">Conference League</string>
+    <string name="europe_won">Won the %1$s</string>
+    <string name="europe_out_league_phase">%1$s: out in the league phase</string>
+    <string name="europe_knocked_out">%1$s: knocked out in the %2$s</string>
+    <string name="europe_fixtures">European results</string>
+
+    <string name="summary_goals_for">Scored</string>
+    <string name="summary_goals_against">Conceded</string>
+    <string name="summary_clean_sheets">Clean sheets</string>
+    <string name="summary_points">Points</string>
+    <string name="summary_top_scorers">Top scorers</string>
+    <string name="summary_table">Final table</string>
+    <string name="summary_fixtures">Every result</string>
+    <string name="table_position">#</string>
+    <string name="table_team">Team</string>
+    <string name="table_played">P</string>
+    <string name="table_goal_difference">GD</string>
+    <string name="table_points">Pts</string>
+    <string name="your_xi">Your XI</string>
+
+    <string name="action_run_it_back">Run it back</string>
+    <string name="action_new_draft">New draft</string>
+    <string name="action_menu">Menu</string>
+
+    <!-- Accessibility -->
+    <string name="cd_back">Back</string>
+    <string name="cd_slot_empty">%1$s, empty</string>
+    <string name="cd_slot_empty_fits">%1$s, empty, someone in this squad fits</string>
+    <string name="cd_slot_spin_for">%1$s, empty, tap to spin for this slot</string>
+    <string name="cd_slot_filled">%1$s, %2$s, rated %3$d</string>
+    <string name="cd_slot_filled_hidden">%1$s, %2$s</string>
+    <string name="cd_place_in">Put in %1$s</string>
+    <string name="cd_record">%1$d won, %2$d drawn, %3$d lost</string>
+</resources>

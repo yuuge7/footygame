@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mown night pitch: the background of the adaptive icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FF0B3B2C"
+        android:pathData="M0,0 H108 V108 H0 Z" />
+    <path
+        android:fillColor="#FF0E4332"
+        android:pathData="M0,0 H108 V13.5 H0 Z M0,27 H108 V40.5 H0 Z M0,54 H108 V67.5 H0 Z M0,81 H108 V94.5 H0 Z" />
+    <path
+        android:strokeColor="#33EEF3EF"
+        android:strokeWidth="1.5"
+        android:pathData="M0,54 H108 M36,54 A18,18 0 1 0 72,54 A18,18 0 1 0 36,54 Z" />
+</vector>

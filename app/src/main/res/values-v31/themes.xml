@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.FootyGame" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/pitch</item>
+        <item name="android:colorBackground">@color/pitch</item>
+        <item name="android:windowSplashScreenBackground">@color/pitch</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_sticker</item>
+    </style>
+</resources>

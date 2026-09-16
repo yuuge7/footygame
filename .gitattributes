@@ -1,0 +1,13 @@
+# Normalise line endings so the Gradle wrapper and CI scripts work on every OS.
+* text=auto
+gradlew text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+*.jar binary
+*.jks binary
+*.keystore binary
+*.png binary
+*.webp binary
+*.ttf binary
