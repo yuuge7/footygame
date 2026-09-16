@@ -120,6 +120,8 @@ jobs:
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
           echo "$SIGNING_KEYSTORE_BASE64" | base64 --decode --ignore-garbage > "$SIGNING_STORE_FILE"
+          # The bump step's git reset restores gradlew's committed mode, so make it executable again.
+          chmod +x gradlew
           ./gradlew assembleRelease
           rm -f "$SIGNING_STORE_FILE"
 
