@@ -1,6 +1,7 @@
 package com.example.footygame.game
 
 import com.example.footygame.data.ClubSeasons
+import com.example.footygame.models.ClubSeason
 import com.example.footygame.models.Difficulty
 import com.example.footygame.models.DraftMode
 import com.example.footygame.models.DraftSession
@@ -198,6 +199,35 @@ class DraftEngineTest {
     }
 
     @Test
+    fun englishModesLeanTowardsStrongSquads() {
+        for (mode in listOf(DraftMode.EPL, DraftMode.FAC)) {
+            val pool = ClubSeasons.poolFor(mode)
+            val strong = { squad: ClubSeason -> DraftEngine.strength(squad) >= STRONG }
+            val uniformShare = pool.count(strong) / pool.size.toDouble()
+
+            val engine = DraftEngine(Random(11))
+            var session = engine.start(mode, DraftSettings(difficulty = Difficulty.EASY))
+            var strongSpins = 0
+            repeat(SPINS) {
+                if (strong(session.spin!!)) strongSpins++
+                session = engine.respin(session.copy(respinsLeft = 1))
+            }
+            val share = strongSpins / SPINS.toDouble()
+            assertTrue("$mode strong share $share vs uniform $uniformShare", share > uniformShare * 1.5)
+            // Still a lean, not a lock: most spins are not title sides.
+            assertTrue("$mode strong share $share", share < 0.45)
+        }
+    }
+
+    @Test
+    fun otherModesSpinEverySquadEvenly() {
+        assertFalse(DraftMode.UCL.favoursStrongSquads)
+        assertFalse(DraftMode.WC.favoursStrongSquads)
+        assertTrue(DraftMode.EPL.favoursStrongSquads)
+        assertTrue(DraftMode.FAC.favoursStrongSquads)
+    }
+
+    @Test
     fun teamRatingsReflectPicks() {
         val barcelona = squad("bar-2010")
         val engine = DraftEngine(Random(0), poolFor = { _, _ -> listOf(barcelona) })
@@ -223,5 +253,10 @@ class DraftEngineTest {
             session = engine.pick(session, spin.players.first(session::isEligible).id)!!
         }
         return session
+    }
+
+    private companion object {
+        const val STRONG = 84.0
+        const val SPINS = 2_000
     }
 }

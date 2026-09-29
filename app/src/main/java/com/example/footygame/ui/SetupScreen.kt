@@ -86,15 +86,16 @@ import com.example.footygame.theme.Chalk
 import com.example.footygame.theme.ChalkLine
 import com.example.footygame.theme.ChalkMuted
 import com.example.footygame.theme.Dugout
-import com.example.footygame.theme.DugoutRaised
 import com.example.footygame.theme.Floodlight
-import com.example.footygame.theme.Ink
+import com.example.footygame.theme.Hot
+import com.example.footygame.theme.PitchSlot
 import com.example.footygame.theme.ResultLoss
+import com.example.footygame.ui.components.ChallengeMark
 import com.example.footygame.ui.components.Eyebrow
-import com.example.footygame.ui.components.PitchMarkings
+import com.example.footygame.ui.components.PitchCard
 import com.example.footygame.ui.components.PrimaryButton
 import com.example.footygame.ui.components.ScreenHeader
-import com.example.footygame.ui.components.mownStripes
+import com.example.footygame.ui.components.nightBackdrop
 import kotlin.math.roundToInt
 
 @Composable
@@ -111,7 +112,7 @@ fun SetupScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .mownStripes()
+            .nightBackdrop()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
     ) {
         ScreenHeader(mode = mode, title = stringResource(R.string.setup_title), onBack = onBack)
@@ -131,7 +132,7 @@ fun SetupScreen(
                 verticalArrangement = Arrangement.spacedBy(28.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(mode.challenge, style = MaterialTheme.typography.displayMedium, color = Floodlight)
+                    ChallengeMark(mode.challenge, MaterialTheme.typography.displayMedium)
                     Text(stringResource(mode.descriptionRes), style = MaterialTheme.typography.bodyMedium, color = ChalkMuted)
                 }
 
@@ -218,7 +219,7 @@ fun SetupScreen(
             }
         }
 
-        Surface(color = Dugout, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
+        Surface(color = Dugout, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
             Box(
                 Modifier
                     .fillMaxWidth()
@@ -283,28 +284,24 @@ private fun FormationSection(selected: Formation, onSelect: (Formation) -> Unit)
 /** A miniature pitch with the formation's positions as labelled dots. */
 @Composable
 private fun FormationPreview(formation: Formation, modifier: Modifier = Modifier) {
-    BoxWithConstraints(
-        modifier
-            .clip(MaterialTheme.shapes.medium)
-            .background(Dugout.copy(alpha = 0.35f))
-            .clearAndSetSemantics { contentDescription = formation.label },
-    ) {
-        PitchMarkings(Modifier.fillMaxSize())
-        val dot = 30.dp
-        val inset = 8.dp
-        val rowHeight = (maxHeight - inset * 2) / formation.rows
-        formation.slots.forEach { slot ->
-            val left = (maxWidth * slot.x - dot / 2).coerceIn(0.dp, maxWidth - dot)
-            val top = inset + rowHeight * slot.row + (rowHeight - dot) / 2
-            Box(
-                Modifier
-                    .offset(left, top)
-                    .size(dot)
-                    .background(Dugout, CircleShape)
-                    .border(1.5.dp, Floodlight, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(slot.label, color = Chalk, style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, letterSpacing = 0.sp))
+    PitchCard(modifier.clearAndSetSemantics { contentDescription = formation.label }, corner = 12.dp) {
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val dot = 30.dp
+            val inset = 8.dp
+            val rowHeight = (maxHeight - inset * 2) / formation.rows
+            formation.slots.forEach { slot ->
+                val left = (maxWidth * slot.x - dot / 2).coerceIn(0.dp, maxWidth - dot)
+                val top = inset + rowHeight * slot.row + (rowHeight - dot) / 2
+                Box(
+                    Modifier
+                        .offset(left, top)
+                        .size(dot)
+                        .background(PitchSlot, CircleShape)
+                        .border(1.dp, Chalk.copy(alpha = 0.6f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(slot.label, color = Chalk, style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, letterSpacing = 0.sp))
+                }
             }
         }
     }
@@ -318,8 +315,8 @@ private fun SettingChip(label: String, selected: Boolean, onClick: () -> Unit, m
         label = { Text(label, style = MaterialTheme.typography.labelLarge) },
         colors = FilterChipDefaults.filterChipColors(
             labelColor = Chalk,
-            selectedContainerColor = Floodlight,
-            selectedLabelColor = Ink,
+            selectedContainerColor = Hot,
+            selectedLabelColor = Chalk,
         ),
         border = FilterChipDefaults.filterChipBorder(enabled = true, selected = selected, borderColor = ChalkLine),
         modifier = modifier,
@@ -353,14 +350,14 @@ private fun OptionCard(
             .fillMaxHeight()
             .alpha(if (enabled) 1f else 0.5f)
             .clip(shape)
-            .background(if (selected) DugoutRaised else Dugout.copy(alpha = 0.9f))
-            .border(if (selected) 2.dp else 1.dp, if (selected) Floodlight else ChalkLine, shape)
+            .background(if (selected) Hot.copy(alpha = 0.12f) else Dugout.copy(alpha = 0.9f))
+            .border(if (selected) 1.5.dp else 1.dp, if (selected) Hot else ChalkLine, shape)
             .selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
     ) {
-        Text(title, style = MaterialTheme.typography.titleMedium, color = if (selected) Floodlight else Chalk, textAlign = TextAlign.Center)
+        Text(title, style = MaterialTheme.typography.titleMedium, color = Chalk, textAlign = TextAlign.Center)
         Text(detail, style = MaterialTheme.typography.bodySmall, color = ChalkMuted, textAlign = TextAlign.Center)
     }
 }
@@ -398,8 +395,8 @@ private fun EraPicker(mode: DraftMode, era: EraRange?, squadCount: Int, onEraCha
         valueRange = 0f..years.lastIndex.toFloat(),
         steps = (years.size - 2).coerceAtLeast(0),
         colors = SliderDefaults.colors(
-            thumbColor = Floodlight,
-            activeTrackColor = Floodlight,
+            thumbColor = Hot,
+            activeTrackColor = Hot,
             inactiveTrackColor = ChalkLine,
             activeTickColor = Color.Transparent,
             inactiveTickColor = Color.Transparent,
@@ -495,7 +492,7 @@ private fun ToggleCard(
             .fillMaxWidth()
             .clip(shape)
             .background(Dugout.copy(alpha = 0.9f))
-            .border(1.dp, if (checked) Floodlight.copy(alpha = 0.6f) else ChalkLine, shape)
+            .border(1.dp, if (checked) Hot.copy(alpha = 0.6f) else ChalkLine, shape)
             .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -504,8 +501,8 @@ private fun ToggleCard(
             checked = checked,
             onCheckedChange = null,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = Ink,
-                checkedTrackColor = Floodlight,
+                checkedThumbColor = Chalk,
+                checkedTrackColor = Hot,
                 uncheckedThumbColor = ChalkMuted,
                 uncheckedTrackColor = Dugout,
                 uncheckedBorderColor = ChalkMuted,

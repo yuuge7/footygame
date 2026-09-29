@@ -41,6 +41,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -59,16 +60,20 @@ import com.example.footygame.models.RunSummary
 import com.example.footygame.models.StageType
 import com.example.footygame.models.Tally
 import com.example.footygame.models.ranked
+import com.example.footygame.theme.BrandGradient
 import com.example.footygame.theme.Chalk
 import com.example.footygame.theme.ChalkLine
 import com.example.footygame.theme.ChalkMuted
 import com.example.footygame.theme.Dugout
 import com.example.footygame.theme.Floodlight
-import com.example.footygame.theme.Ink
+import com.example.footygame.theme.Hot
+import com.example.footygame.theme.ResultDraw
+import com.example.footygame.theme.ResultLoss
+import com.example.footygame.theme.ResultWin
 import com.example.footygame.ui.components.Eyebrow
 import com.example.footygame.ui.components.ScreenHeader
 import com.example.footygame.ui.components.StatBlock
-import com.example.footygame.ui.components.mownStripes
+import com.example.footygame.ui.components.nightBackdrop
 import kotlin.math.roundToInt
 
 /** How many rows each leaderboard shows. */
@@ -89,7 +94,7 @@ fun StatsScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .mownStripes()
+            .nightBackdrop()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
     ) {
         ScreenHeader(eyebrow = stringResource(R.string.stats_eyebrow), title = stringResource(R.string.stats_title), onBack = onBack)
@@ -141,8 +146,8 @@ private fun ModeFilter(selected: DraftMode?, onSelect: (DraftMode?) -> Unit) {
     val colors = FilterChipDefaults.filterChipColors(
         containerColor = Dugout,
         labelColor = Chalk,
-        selectedContainerColor = Floodlight,
-        selectedLabelColor = Ink,
+        selectedContainerColor = Hot,
+        selectedLabelColor = Chalk,
     )
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         FilterChip(
@@ -204,9 +209,9 @@ private fun RecordCard(totals: ModeTotals) {
     StatsCard(stringResource(R.string.stats_record)) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             StatBlock(totals.played.toString(), stringResource(R.string.stats_played))
-            StatBlock(totals.won.toString(), stringResource(R.string.run_wins))
-            StatBlock(totals.drawn.toString(), stringResource(R.string.run_draws))
-            StatBlock(totals.lost.toString(), stringResource(R.string.run_losses))
+            StatBlock(totals.won.toString(), stringResource(R.string.run_wins), valueColor = ResultWin)
+            StatBlock(totals.drawn.toString(), stringResource(R.string.run_draws), valueColor = ResultDraw)
+            StatBlock(totals.lost.toString(), stringResource(R.string.run_losses), valueColor = ResultLoss)
         }
         // Win rate is one ratio against a whole, so it reads as a meter rather than a chart.
         val description = stringResource(R.string.cd_stats_win_rate, winRate, totals.played)
@@ -329,7 +334,7 @@ private fun MagnitudeBar(fraction: Float, thickness: Dp) {
                 Modifier
                     .fillMaxWidth(fraction.coerceIn(0f, 1f))
                     .height(thickness)
-                    .background(Floodlight, end),
+                    .background(Brush.horizontalGradient(BrandGradient), end),
             )
         }
     }

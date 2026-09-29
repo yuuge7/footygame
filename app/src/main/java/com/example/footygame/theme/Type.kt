@@ -8,64 +8,65 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.footygame.R
 
-/** Big Shoulders Display: tall, condensed stadium-signage numerals for scores and titles. */
+/** Poppins: heavy geometric headlines and scoreboard numbers. */
 val DisplayFamily = FontFamily(
-    Font(R.font.bigshoulders_extrabold, FontWeight.ExtraBold),
-    Font(R.font.bigshoulders_black, FontWeight.Black),
+    Font(R.font.poppins_bold, FontWeight.Bold),
+    Font(R.font.poppins_extrabold, FontWeight.ExtraBold),
+    Font(R.font.poppins_black, FontWeight.Black),
 )
 
-/** Barlow: plain-spoken grotesk for names, copy and labels. */
+/** Inter: neutral UI grotesk for names, copy and labels. */
 val BodyFamily = FontFamily(
-    Font(R.font.barlow_regular, FontWeight.Normal),
-    Font(R.font.barlow_medium, FontWeight.Medium),
-    Font(R.font.barlow_semibold, FontWeight.SemiBold),
-    Font(R.font.barlow_bold, FontWeight.Bold),
+    Font(R.font.inter_regular, FontWeight.Normal),
+    Font(R.font.inter_medium, FontWeight.Medium),
+    Font(R.font.inter_semibold, FontWeight.SemiBold),
+    Font(R.font.inter_bold, FontWeight.Bold),
 )
 
 val Typography = Typography(
     displayLarge = TextStyle(
-        fontFamily = DisplayFamily, fontWeight = FontWeight.Black,
-        fontSize = 96.sp, lineHeight = 84.sp, letterSpacing = (-1).sp,
+        fontFamily = DisplayFamily, fontWeight = FontWeight.ExtraBold,
+        fontSize = 64.sp, lineHeight = 64.sp, letterSpacing = (-2).sp,
     ),
     displayMedium = TextStyle(
-        fontFamily = DisplayFamily, fontWeight = FontWeight.Black,
-        fontSize = 60.sp, lineHeight = 56.sp,
+        fontFamily = DisplayFamily, fontWeight = FontWeight.ExtraBold,
+        fontSize = 44.sp, lineHeight = 46.sp, letterSpacing = (-1.2).sp,
     ),
     displaySmall = TextStyle(
-        fontFamily = DisplayFamily, fontWeight = FontWeight.Black,
-        fontSize = 44.sp, lineHeight = 44.sp,
+        fontFamily = DisplayFamily, fontWeight = FontWeight.ExtraBold,
+        fontSize = 32.sp, lineHeight = 36.sp, letterSpacing = (-0.8).sp,
     ),
     headlineLarge = TextStyle(
         fontFamily = DisplayFamily, fontWeight = FontWeight.ExtraBold,
-        fontSize = 34.sp, lineHeight = 36.sp,
+        fontSize = 28.sp, lineHeight = 32.sp, letterSpacing = (-0.6).sp,
     ),
     headlineMedium = TextStyle(
-        fontFamily = DisplayFamily, fontWeight = FontWeight.ExtraBold,
-        fontSize = 28.sp, lineHeight = 30.sp,
+        fontFamily = DisplayFamily, fontWeight = FontWeight.Bold,
+        fontSize = 23.sp, lineHeight = 28.sp, letterSpacing = (-0.4).sp,
     ),
     headlineSmall = TextStyle(
-        fontFamily = DisplayFamily, fontWeight = FontWeight.ExtraBold,
-        fontSize = 23.sp, lineHeight = 26.sp, letterSpacing = 0.3.sp,
+        fontFamily = DisplayFamily, fontWeight = FontWeight.Bold,
+        fontSize = 19.sp, lineHeight = 24.sp, letterSpacing = (-0.2).sp,
     ),
     titleLarge = TextStyle(
         fontFamily = BodyFamily, fontWeight = FontWeight.Bold,
-        fontSize = 20.sp, lineHeight = 26.sp,
+        fontSize = 19.sp, lineHeight = 25.sp,
     ),
     titleMedium = TextStyle(
         fontFamily = BodyFamily, fontWeight = FontWeight.SemiBold,
-        fontSize = 16.sp, lineHeight = 22.sp,
+        fontSize = 15.sp, lineHeight = 21.sp,
     ),
     titleSmall = TextStyle(
         fontFamily = BodyFamily, fontWeight = FontWeight.SemiBold,
-        fontSize = 14.sp, lineHeight = 20.sp,
+        fontSize = 13.sp, lineHeight = 18.sp,
     ),
     bodyLarge = TextStyle(
         fontFamily = BodyFamily, fontWeight = FontWeight.Normal,
-        fontSize = 16.sp, lineHeight = 23.sp,
+        fontSize = 15.sp, lineHeight = 22.sp,
     ),
     bodyMedium = TextStyle(
         fontFamily = BodyFamily, fontWeight = FontWeight.Normal,
-        fontSize = 14.sp, lineHeight = 20.sp,
+        fontSize = 13.sp, lineHeight = 19.sp,
     ),
     bodySmall = TextStyle(
         fontFamily = BodyFamily, fontWeight = FontWeight.Medium,
@@ -73,14 +74,14 @@ val Typography = Typography(
     ),
     labelLarge = TextStyle(
         fontFamily = BodyFamily, fontWeight = FontWeight.Bold,
-        fontSize = 15.sp, lineHeight = 20.sp, letterSpacing = 0.6.sp,
+        fontSize = 15.sp, lineHeight = 20.sp,
     ),
     labelMedium = TextStyle(
         fontFamily = BodyFamily, fontWeight = FontWeight.Bold,
-        fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 1.4.sp,
+        fontSize = 11.sp, lineHeight = 14.sp, letterSpacing = 1.6.sp,
     ),
     labelSmall = TextStyle(
         fontFamily = BodyFamily, fontWeight = FontWeight.SemiBold,
-        fontSize = 11.sp, lineHeight = 14.sp, letterSpacing = 1.sp,
+        fontSize = 10.sp, lineHeight = 13.sp, letterSpacing = 1.2.sp,
     ),
 )

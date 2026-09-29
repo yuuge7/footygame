@@ -5,6 +5,7 @@
     <string name="menu_title_top">Footy</string>
     <string name="menu_title_bottom">Draft</string>
     <string name="menu_tagline">Spin squads from champions to strugglers. Draft an XI. Win every match.</string>
+    <string name="menu_kicker">The challenge</string>
     <string name="menu_choose">Choose a challenge</string>
     <string name="menu_how_to_play">How to play</string>
     <string name="record_none">No runs yet</string>
@@ -117,6 +118,9 @@
         <item quantity="other">%d left</item>
     </plurals>
     <string name="draft_spin_label">This spin</string>
+    <string name="draft_spin_club">Club</string>
+    <string name="draft_spin_season">Season</string>
+    <string name="draft_spin_hint">Tap a glowing position or pick from the squad.</string>
     <string name="draft_spin_for_slot">Spin for your %1$s</string>
     <string name="draft_choose_slot">Tap a slot to spin for it</string>
     <string name="draft_choose_slot_detail">The spin is locked to that slot. Re-spins keep the same slot.</string>
@@ -160,6 +164,7 @@
     <string name="run_draws">Drawn</string>
     <string name="run_losses">Lost</string>
     <string name="run_progress">%1$d of %2$d played</string>
+    <string name="run_record">Record</string>
     <string name="run_perfect_so_far">Perfect so far</string>
     <string name="run_perfect_over">Perfect run over</string>
     <string name="stage_matchday">Matchday %1$d</string>
@@ -203,6 +208,8 @@
     <string name="verdict_perfect_detail">Every match won. Frame this XI.</string>
     <string name="verdict_manager">Gaffer · %1$s · %2$s</string>
     <string name="new_best">New best</string>
+    <string name="verdict_badge_perfect">GOAT</string>
+    <string name="verdict_badge_trophy">Silverware</string>
 
     <string name="january_title">January transfer window</string>
     <string name="january_body">Halfway there at %1$d-%2$d-%3$d. Pick one gamble. There\'s no undo.</string>

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,7 +23,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -31,7 +31,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -42,12 +41,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,24 +65,29 @@ import com.example.footygame.models.Verdict
 import com.example.footygame.models.draws
 import com.example.footygame.models.losses
 import com.example.footygame.models.wins
+import com.example.footygame.theme.BrandGradient
 import com.example.footygame.theme.Chalk
 import com.example.footygame.theme.ChalkLine
 import com.example.footygame.theme.ChalkMuted
 import com.example.footygame.theme.Dugout
 import com.example.footygame.theme.DugoutRaised
 import com.example.footygame.theme.Floodlight
-import com.example.footygame.theme.FoilGold
+import com.example.footygame.theme.GoldGradient
 import com.example.footygame.theme.Ink
-import com.example.footygame.theme.InkMuted
 import com.example.footygame.theme.ResultLoss
+import com.example.footygame.theme.ResultWin
+import com.example.footygame.ui.components.ChallengeMark
+import com.example.footygame.ui.components.Confetti
 import com.example.footygame.ui.components.Eyebrow
+import com.example.footygame.ui.components.Pill
 import com.example.footygame.ui.components.PrimaryButton
+import com.example.footygame.ui.components.RecordNumbers
 import com.example.footygame.ui.components.ResultPill
 import com.example.footygame.ui.components.ScreenHeader
 import com.example.footygame.ui.components.SecondaryButton
 import com.example.footygame.ui.components.StatBlock
-import com.example.footygame.ui.components.foilFrame
-import com.example.footygame.ui.components.mownStripes
+import com.example.footygame.ui.components.nightBackdrop
+import com.example.footygame.ui.components.panel
 import com.example.footygame.viewmodel.RunState
 
 @Composable
@@ -114,97 +117,105 @@ fun SimulationScreen(
         }
     }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .mownStripes()
-            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
-    ) {
-        ScreenHeader(
-            mode = run.mode,
-            title = stringResource(R.string.run_progress, shown.size, run.mode.matches),
-            onBack = onBack,
+    Box(Modifier.fillMaxSize()) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .nightBackdrop()
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
         ) {
-            // Nothing takes Skip's place once the reveal ends, so a late tap on Skip can't leave the results.
+            ScreenHeader(
+                mode = run.mode,
+                title = stringResource(R.string.run_progress, shown.size, run.mode.matches),
+                onBack = onBack,
+            ) {
+                // Nothing takes Skip's place once the reveal ends, so a late tap on Skip can't leave the results.
+                if (!complete) {
+                    TextButton(onClick = onSkip, modifier = Modifier.testTag("skip")) {
+                        Text(stringResource(R.string.run_skip), color = Floodlight)
+                    }
+                }
+            }
+
+            // Pinned while matches tick in; once the run is over it scrolls away with the summary to give results room.
             if (!complete) {
-                TextButton(onClick = onSkip, modifier = Modifier.testTag("skip")) { Text(stringResource(R.string.run_skip)) }
+                Scoreboard(shown, run.mode.matches, Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
             }
-        }
 
-        // Pinned while matches tick in; once the run is over it scrolls away with the summary to give results room.
-        if (!complete) {
-            Scoreboard(shown, run.mode.matches, Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
-        }
-
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-        ) {
-            if (complete && result != null) {
-                item(key = "scoreboard") { Scoreboard(shown, run.mode.matches, Modifier.padding(bottom = 16.dp)) }
-                item(key = "verdict") { VerdictCard(result, run.isNewBest) }
-                item(key = "summary") { SummaryStats(result) }
-                item(key = "highlights") { Highlights(result) }
-                result.europe?.let { europe -> item(key = "europe") { EuropeCard(europe) } }
-                if (result.table.isNotEmpty()) item(key = "table") { TablePreview(result.table) }
-                if (result.topScorers.isNotEmpty()) item(key = "scorers") { TopScorers(result) }
-                item(key = "fixtures_header") {
-                    Eyebrow(stringResource(R.string.summary_fixtures), modifier = Modifier.padding(top = 24.dp, bottom = 4.dp))
-                }
-            }
-            val january = result?.january
-            itemsIndexed(shown, key = { index, _ -> "match_$index" }) { index, match ->
-                Column {
-                    if (january != null && index == january.afterMatches) JanuaryRow(january)
-                    FixtureRow(match, names)
-                }
-            }
-            val europe = result?.europe
-            if (complete && europe != null) {
-                item(key = "europe_header") {
-                    Eyebrow(stringResource(R.string.europe_fixtures), modifier = Modifier.padding(top = 24.dp, bottom = 4.dp))
-                }
-                itemsIndexed(europe.matches, key = { index, _ -> "europe_$index" }) { _, match ->
-                    FixtureRow(match, names)
-                }
-            }
-        }
-
-        if (complete) {
-            Surface(color = Dugout, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 4.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        PrimaryButton(
-                            stringResource(R.string.action_run_it_back),
-                            onRunItBack,
-                            Modifier
-                                .weight(1f)
-                                .testTag("run_it_back"),
-                        )
-                        SecondaryButton(
-                            stringResource(R.string.action_new_draft),
-                            onNewDraft,
-                            Modifier
-                                .weight(1f)
-                                .testTag("new_draft"),
-                        )
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+            ) {
+                if (complete && result != null) {
+                    item(key = "scoreboard") { Scoreboard(shown, run.mode.matches, Modifier.padding(bottom = 16.dp)) }
+                    item(key = "verdict") { VerdictCard(result, run.isNewBest) }
+                    item(key = "summary") { SummaryStats(result) }
+                    item(key = "highlights") { Highlights(result) }
+                    result.europe?.let { europe -> item(key = "europe") { EuropeCard(europe) } }
+                    if (result.table.isNotEmpty()) item(key = "table") { TablePreview(result.table) }
+                    if (result.topScorers.isNotEmpty()) item(key = "scorers") { TopScorers(result) }
+                    item(key = "fixtures_header") {
+                        Eyebrow(stringResource(R.string.summary_fixtures), modifier = Modifier.padding(top = 24.dp, bottom = 4.dp))
                     }
-                    TextButton(onClick = onMenu, modifier = Modifier.testTag("menu")) {
-                        Text(stringResource(R.string.action_menu))
+                }
+                val january = result?.january
+                itemsIndexed(shown, key = { index, _ -> "match_$index" }) { index, match ->
+                    Column {
+                        if (january != null && index == january.afterMatches) JanuaryRow(january)
+                        FixtureRow(match, names)
+                    }
+                }
+                val europe = result?.europe
+                if (complete && europe != null) {
+                    item(key = "europe_header") {
+                        Eyebrow(stringResource(R.string.europe_fixtures), modifier = Modifier.padding(top = 24.dp, bottom = 4.dp))
+                    }
+                    itemsIndexed(europe.matches, key = { index, _ -> "europe_$index" }) { _, match ->
+                        FixtureRow(match, names)
                     }
                 }
             }
-        } else {
-            Spacer(Modifier.navigationBarsPadding())
+
+            if (complete) {
+                Surface(color = Dugout, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            PrimaryButton(
+                                stringResource(R.string.action_run_it_back),
+                                onRunItBack,
+                                Modifier
+                                    .weight(1f)
+                                    .testTag("run_it_back"),
+                            )
+                            SecondaryButton(
+                                stringResource(R.string.action_new_draft),
+                                onNewDraft,
+                                Modifier
+                                    .weight(1f)
+                                    .testTag("new_draft"),
+                            )
+                        }
+                        TextButton(onClick = onMenu, modifier = Modifier.testTag("menu")) {
+                            Text(stringResource(R.string.action_menu), color = ChalkMuted)
+                        }
+                    }
+                }
+            } else {
+                Spacer(Modifier.navigationBarsPadding())
+            }
+        }
+        // Perfect runs and trophies rain confetti over the results, like the final whistle of a title win.
+        if (complete && result != null && (result.isFlawless || result.wonTrophy)) {
+            Confetti(seed = run.seed, modifier = Modifier.fillMaxSize())
         }
     }
 
@@ -219,7 +230,8 @@ private fun JanuaryDialog(played: List<MatchResult>, offers: List<JanuaryEvent>,
     AlertDialog(
         onDismissRequest = {},
         properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
-        title = { Text(stringResource(R.string.january_title).uppercase(), style = MaterialTheme.typography.headlineMedium) },
+        containerColor = DugoutRaised,
+        title = { Text(stringResource(R.string.january_title), style = MaterialTheme.typography.headlineMedium) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
@@ -273,85 +285,103 @@ private fun JanuaryRow(outcome: JanuaryOutcome) {
 @Composable
 private fun Scoreboard(shown: List<MatchResult>, total: Int, modifier: Modifier = Modifier) {
     val perfect = shown.wins == shown.size
-    val description = stringResource(R.string.cd_record, shown.wins, shown.draws, shown.losses)
+    val progress = if (total == 0) 0f else shown.size / total.toFloat()
 
-    Surface(
-        color = Dugout,
-        shape = MaterialTheme.shapes.large,
-        modifier = modifier.fillMaxWidth(),
+    Column(
+        modifier
+            .fillMaxWidth()
+            .panel(RoundedCornerShape(18.dp))
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
-            Row(
+        Eyebrow(stringResource(R.string.run_record))
+        RecordNumbers(
+            shown.wins,
+            shown.draws,
+            shown.losses,
+            style = MaterialTheme.typography.displayMedium,
+            modifier = Modifier.padding(vertical = 2.dp),
+        )
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+                .clip(CircleShape)
+                .background(ChalkLine),
+        ) {
+            Box(
                 Modifier
-                    .fillMaxWidth()
-                    .clearAndSetSemantics { contentDescription = description },
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                ScoreboardNumber(shown.wins, stringResource(R.string.run_wins))
-                ScoreboardNumber(shown.draws, stringResource(R.string.run_draws))
-                ScoreboardNumber(shown.losses, stringResource(R.string.run_losses))
-            }
-            Spacer(Modifier.height(10.dp))
-            LinearProgressIndicator(
-                progress = { if (total == 0) 0f else shown.size / total.toFloat() },
-                color = Floodlight,
-                trackColor = ChalkLine,
-                gapSize = 0.dp,
-                drawStopIndicator = {},
-                modifier = Modifier.fillMaxWidth(),
+                    .fillMaxWidth(progress)
+                    .fillMaxHeight()
+                    .clip(CircleShape)
+                    .background(Brush.horizontalGradient(BrandGradient)),
             )
-            Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .size(8.dp)
-                        .background(if (perfect) Floodlight else ResultLoss, CircleShape),
-                )
-                Spacer(Modifier.width(8.dp))
-                Eyebrow(
-                    stringResource(if (perfect) R.string.run_perfect_so_far else R.string.run_perfect_over),
-                    color = Chalk,
-                )
-            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .size(8.dp)
+                    .background(if (perfect) ResultWin else ResultLoss, CircleShape),
+            )
+            Spacer(Modifier.width(8.dp))
+            Eyebrow(
+                stringResource(if (perfect) R.string.run_perfect_so_far else R.string.run_perfect_over),
+                color = Chalk,
+            )
         }
     }
 }
 
-@Composable
-private fun ScoreboardNumber(value: Int, label: String) = StatBlock(
-    value = value.toString(),
-    label = label,
-    modifier = Modifier.widthIn(min = 72.dp),
-    valueColor = Floodlight,
-    valueStyle = MaterialTheme.typography.displayMedium,
-    horizontalAlignment = Alignment.CenterHorizontally,
-)
-
+/** The result. A flawless run gets the full scoreboard treatment: the record huge in pink and gold. */
 @Composable
 private fun VerdictCard(result: RunResult, isNewBest: Boolean) {
     val golden = result.isFlawless || result.wonTrophy
-    val card = if (golden) {
-        Modifier.foilFrame(FoilGold, corner = 22.dp, thickness = 5.dp)
-    } else {
-        Modifier.background(DugoutRaised, RoundedCornerShape(22.dp))
-    }
-    val ink = if (golden) Ink else Chalk
-    val subtle = if (golden) InkMuted else ChalkMuted
 
     Column(
         Modifier
             .fillMaxWidth()
-            .then(card)
-            .padding(20.dp)
+            .panel(
+                RoundedCornerShape(22.dp),
+                color = if (golden) DugoutRaised else Dugout,
+                edge = if (golden) Floodlight.copy(alpha = 0.55f) else ChalkLine,
+            )
+            .padding(horizontal = 20.dp, vertical = 22.dp)
             .testTag("verdict"),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (isNewBest) Eyebrow(stringResource(R.string.new_best), color = if (golden) InkMuted else Floodlight)
+        if (isNewBest) Pill(stringResource(R.string.new_best))
         result.manager?.let {
-            Eyebrow(stringResource(R.string.verdict_manager, it.name, stringResource(it.trait.titleRes)), color = subtle)
+            Eyebrow(stringResource(R.string.verdict_manager, it.name, stringResource(it.trait.titleRes)))
         }
-        Text(verdictHeadline(result).uppercase(), style = MaterialTheme.typography.displaySmall, color = ink)
-        verdictDetail(result)?.let { Text(it, style = MaterialTheme.typography.bodyLarge, color = subtle) }
+        if (result.isFlawless) {
+            ChallengeMark(
+                "${result.matches.wins}-${result.matches.draws}-${result.matches.losses}",
+                MaterialTheme.typography.displayLarge,
+            )
+        }
+        Text(
+            verdictHeadline(result),
+            style = if (result.isFlawless) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineLarge,
+            color = Chalk,
+            textAlign = TextAlign.Center,
+        )
+        verdictDetail(result)?.let {
+            Text(it, style = MaterialTheme.typography.bodyLarge, color = ChalkMuted, textAlign = TextAlign.Center)
+        }
+        if (golden) {
+            Text(
+                stringResource(if (result.isFlawless) R.string.verdict_badge_perfect else R.string.verdict_badge_trophy),
+                style = MaterialTheme.typography.labelLarge,
+                color = Ink,
+                modifier = Modifier
+                    .padding(top = 6.dp)
+                    .clip(CircleShape)
+                    .background(Brush.horizontalGradient(GoldGradient))
+                    .padding(horizontal = 26.dp, vertical = 8.dp),
+            )
+        }
     }
 }
 
@@ -404,23 +434,23 @@ private fun EuropeCard(europe: EuropeanRun) {
         Modifier
             .fillMaxWidth()
             .padding(top = 24.dp)
-            .then(
-                if (won) {
-                    Modifier.foilFrame(FoilGold, corner = 18.dp, thickness = 4.dp)
-                } else {
-                    Modifier.background(DugoutRaised, RoundedCornerShape(18.dp))
-                },
+            .panel(
+                RoundedCornerShape(18.dp),
+                color = DugoutRaised,
+                edge = if (won) Floodlight.copy(alpha = 0.55f) else ChalkLine,
             )
             .padding(16.dp)
             .testTag("europe"),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Eyebrow(stringResource(R.string.europe_title), color = if (won) InkMuted else ChalkMuted)
-        Text(headline.uppercase(), style = MaterialTheme.typography.headlineSmall, color = if (won) Ink else Chalk)
-        Text(
-            stringResource(R.string.cd_record, europe.matches.wins, europe.matches.draws, europe.matches.losses),
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (won) InkMuted else ChalkMuted,
+        Eyebrow(stringResource(R.string.europe_title), color = if (won) Floodlight else ChalkMuted)
+        Text(headline, style = MaterialTheme.typography.headlineSmall, color = Chalk)
+        RecordNumbers(
+            europe.matches.wins,
+            europe.matches.draws,
+            europe.matches.losses,
+            style = MaterialTheme.typography.headlineMedium,
+            gap = 8.dp,
         )
     }
 }

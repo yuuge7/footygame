@@ -1,18 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Mown night pitch: the background of the adaptive icon. -->
+<!-- Stadium at night: near-black with violet and magenta floodlight glows. Background of the adaptive icon. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:fillColor="#FF0B3B2C"
+        android:fillColor="#FF09090F"
         android:pathData="M0,0 H108 V108 H0 Z" />
-    <path
-        android:fillColor="#FF0E4332"
-        android:pathData="M0,0 H108 V13.5 H0 Z M0,27 H108 V40.5 H0 Z M0,54 H108 V67.5 H0 Z M0,81 H108 V94.5 H0 Z" />
-    <path
-        android:strokeColor="#33EEF3EF"
-        android:strokeWidth="1.5"
-        android:pathData="M0,54 H108 M36,54 A18,18 0 1 0 72,54 A18,18 0 1 0 36,54 Z" />
+    <path android:pathData="M0,0 H108 V108 H0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="100"
+                android:centerY="4"
+                android:gradientRadius="84"
+                android:startColor="#E63B1C70"
+                android:endColor="#003B1C70" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M0,0 H108 V108 H0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="4"
+                android:centerY="104"
+                android:gradientRadius="70"
+                android:startColor="#CC4C0F31"
+                android:endColor="#004C0F31" />
+        </aapt:attr>
+    </path>
 </vector>

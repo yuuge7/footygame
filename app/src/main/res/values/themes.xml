@@ -2,7 +2,7 @@
 <resources>
 
     <style name="Theme.FootyGame" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">@color/pitch</item>
-        <item name="android:colorBackground">@color/pitch</item>
+        <item name="android:windowBackground">@color/night</item>
+        <item name="android:colorBackground">@color/night</item>
     </style>
 </resources>

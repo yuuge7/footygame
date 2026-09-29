@@ -26,7 +26,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -41,11 +40,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.footygame.R
@@ -55,13 +58,16 @@ import com.example.footygame.theme.Chalk
 import com.example.footygame.theme.ChalkLine
 import com.example.footygame.theme.ChalkMuted
 import com.example.footygame.theme.Dugout
+import com.example.footygame.theme.DugoutRaised
 import com.example.footygame.theme.Floodlight
-import com.example.footygame.theme.FoilGold
-import com.example.footygame.theme.Ink
+import com.example.footygame.theme.HeadlineGradient
+import com.example.footygame.theme.Hot
+import com.example.footygame.ui.components.ChallengeMark
 import com.example.footygame.ui.components.Eyebrow
+import com.example.footygame.ui.components.Pill
 import com.example.footygame.ui.components.SecondaryButton
-import com.example.footygame.ui.components.foilFrame
-import com.example.footygame.ui.components.mownStripes
+import com.example.footygame.ui.components.SquareIconButton
+import com.example.footygame.ui.components.nightBackdrop
 
 @Composable
 fun MainMenuScreen(
@@ -75,10 +81,10 @@ fun MainMenuScreen(
     LaunchedEffect(Unit) { hasEntered = true }
 
     LazyColumn(
-        // Stripes fill the screen; cards read best at phone width, so on landscape and tablets the column stays centred.
+        // The backdrop fills the screen; cards read best at phone width, so on landscape and tablets the column stays centred.
         modifier = Modifier
             .fillMaxSize()
-            .mownStripes()
+            .nightBackdrop()
             .wrapContentWidth()
             .widthIn(max = 640.dp),
         contentPadding = WindowInsets.safeDrawing
@@ -88,27 +94,32 @@ fun MainMenuScreen(
     ) {
         item {
             Box(Modifier.fillMaxWidth()) {
-                IconButton(
+                SquareIconButton(
+                    painter = painterResource(R.drawable.ic_help),
+                    contentDescription = stringResource(R.string.menu_how_to_play),
                     onClick = { showHowToPlay = true },
+                    tint = ChalkMuted,
                     modifier = Modifier.align(Alignment.TopEnd),
+                )
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 44.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_help),
-                        contentDescription = stringResource(R.string.menu_how_to_play),
-                        tint = ChalkMuted,
-                    )
-                }
-                Column(Modifier.padding(top = 36.dp)) {
-                    WordmarkSticker()
-                    Spacer(Modifier.height(24.dp))
+                    Pill(stringResource(R.string.menu_kicker))
+                    Spacer(Modifier.height(18.dp))
+                    Wordmark()
+                    Spacer(Modifier.height(14.dp))
                     Text(
                         text = stringResource(R.string.menu_tagline),
                         style = MaterialTheme.typography.bodyLarge,
                         color = ChalkMuted,
-                        modifier = Modifier.widthIn(max = 320.dp),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.widthIn(max = 300.dp),
                     )
-                    Spacer(Modifier.height(20.dp))
-                    Eyebrow(stringResource(R.string.menu_choose))
+                    Spacer(Modifier.height(30.dp))
+                    Eyebrow(stringResource(R.string.menu_choose), Modifier.fillMaxWidth())
                 }
             }
         }
@@ -136,27 +147,26 @@ fun MainMenuScreen(
     if (showHowToPlay) HowToPlayDialog(onDismiss = { showHowToPlay = false })
 }
 
-/** The title as the first sticker in the album. */
+/** The title: plain white first word, the second lit in the brand gradient. */
 @Composable
-private fun WordmarkSticker() {
-    val style = MaterialTheme.typography.displayLarge.copy(fontSize = 72.sp, lineHeight = 64.sp)
-    Column(
-        modifier = Modifier
-            .rotate(-3f)
-            .shadow(10.dp, RoundedCornerShape(18.dp))
-            .foilFrame(FoilGold, corner = 18.dp, thickness = 5.dp)
-            .padding(horizontal = 22.dp, vertical = 14.dp),
-    ) {
-        Text(stringResource(R.string.menu_title_top).uppercase(), style = style, color = Ink)
-        Text(stringResource(R.string.menu_title_bottom).uppercase(), style = style, color = Ink)
-    }
+private fun Wordmark() {
+    val top = stringResource(R.string.menu_title_top)
+    val bottom = stringResource(R.string.menu_title_bottom)
+    Text(
+        text = buildAnnotatedString {
+            withStyle(SpanStyle(color = Chalk)) { append(top) }
+            append("\n")
+            withStyle(SpanStyle(brush = Brush.horizontalGradient(HeadlineGradient))) { append(bottom) }
+        },
+        style = MaterialTheme.typography.displayLarge.copy(textAlign = TextAlign.Center, lineHeight = 66.sp),
+    )
 }
 
 @Composable
 private fun ModeCard(mode: DraftMode, record: ModeRecord, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        shape = MaterialTheme.shapes.large,
+        shape = RoundedCornerShape(18.dp),
         color = Dugout.copy(alpha = 0.92f),
         border = BorderStroke(1.dp, ChalkLine),
         modifier = Modifier
@@ -164,20 +174,19 @@ private fun ModeCard(mode: DraftMode, record: ModeRecord, onClick: () -> Unit) {
             .testTag("mode_${mode.name}"),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+            modifier = Modifier.padding(start = 18.dp, end = 10.dp, top = 16.dp, bottom = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text(
+            ChallengeMark(
                 text = mode.challenge,
-                style = MaterialTheme.typography.displayMedium,
-                color = Floodlight,
+                style = MaterialTheme.typography.displaySmall,
                 // Wide enough for "38-0" so every card's title starts on the same line.
-                modifier = Modifier.widthIn(min = 116.dp),
+                modifier = Modifier.widthIn(min = 84.dp),
             )
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
-                    text = stringResource(mode.titleRes).uppercase(),
+                    text = stringResource(mode.titleRes),
                     style = MaterialTheme.typography.headlineSmall,
                     color = Chalk,
                 )
@@ -187,8 +196,14 @@ private fun ModeCard(mode: DraftMode, record: ModeRecord, onClick: () -> Unit) {
                     color = ChalkMuted,
                 )
                 Spacer(Modifier.height(4.dp))
-                Eyebrow(recordLine(record), color = if (record.runs > 0) Chalk else ChalkMuted)
+                Eyebrow(recordLine(record), color = if (record.runs > 0) Floodlight else ChalkMuted)
             }
+            Icon(
+                painter = painterResource(R.drawable.ic_expand_more),
+                contentDescription = null,
+                tint = ChalkMuted,
+                modifier = Modifier.rotate(-90f),
+            )
         }
     }
 }
@@ -215,7 +230,8 @@ private fun HowToPlayDialog(onDismiss: () -> Unit) {
     )
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.how_to_play_title).uppercase(), style = MaterialTheme.typography.headlineMedium) },
+        containerColor = DugoutRaised,
+        title = { Text(stringResource(R.string.how_to_play_title), style = MaterialTheme.typography.headlineMedium) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 steps.forEachIndexed { index, step ->
@@ -223,7 +239,7 @@ private fun HowToPlayDialog(onDismiss: () -> Unit) {
                         Text(
                             text = (index + 1).toString(),
                             style = MaterialTheme.typography.headlineSmall,
-                            color = Floodlight,
+                            color = Hot,
                             modifier = Modifier.widthIn(min = 16.dp),
                         )
                         Text(stringResource(step), style = MaterialTheme.typography.bodyMedium, color = Chalk)
@@ -232,7 +248,7 @@ private fun HowToPlayDialog(onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_got_it)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_got_it), color = Floodlight) }
         },
     )
 }

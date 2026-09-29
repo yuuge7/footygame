@@ -20,7 +20,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -63,13 +66,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.footygame.R
 import com.example.footygame.data.ClubSeasons
@@ -86,17 +92,21 @@ import com.example.footygame.theme.ChalkMuted
 import com.example.footygame.theme.Dugout
 import com.example.footygame.theme.DugoutRaised
 import com.example.footygame.theme.Floodlight
+import com.example.footygame.theme.Hot
+import com.example.footygame.ui.components.ChallengeMark
 import com.example.footygame.ui.components.ClubBadge
 import com.example.footygame.ui.components.EmptySlot
 import com.example.footygame.ui.components.Eyebrow
-import com.example.footygame.ui.components.PitchMarkings
-import com.example.footygame.ui.components.PlayerSticker
+import com.example.footygame.ui.components.PitchCard
+import com.example.footygame.ui.components.Pill
+import com.example.footygame.ui.components.PlayerToken
 import com.example.footygame.ui.components.PrimaryButton
-import com.example.footygame.ui.components.RatingTile
-import com.example.footygame.ui.components.STICKER_ASPECT
-import com.example.footygame.ui.components.ScreenHeader
-import com.example.footygame.ui.components.StatBlock
-import com.example.footygame.ui.components.mownStripes
+import com.example.footygame.ui.components.RatingBadge
+import com.example.footygame.ui.components.SquareIconButton
+import com.example.footygame.ui.components.StatTile
+import com.example.footygame.ui.components.TOKEN_ASPECT
+import com.example.footygame.ui.components.nightBackdrop
+import com.example.footygame.ui.components.panel
 import com.example.footygame.ui.components.rememberReducedMotion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -149,13 +159,26 @@ fun DraftScreen(
     val requestLeave = { if (session.picks.isEmpty()) onLeave() else showLeaveDialog = true }
     BackHandler(enabled = session.picks.isNotEmpty()) { showLeaveDialog = true }
 
+    val spinPanel = @Composable { modifier: Modifier ->
+        SpinPanel(
+            session = session,
+            reel = reel,
+            spinning = spinning,
+            onRespin = onRespin,
+            onPickPlayer = { openSheet(null) },
+            onAppointManager = onAppointManager,
+            onPlay = onPlay,
+            modifier = modifier,
+        )
+    }
+
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
-            .mownStripes()
+            .nightBackdrop()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
     ) {
-        // Landscape: a full-height pitch beside the controls, so stickers stay readable.
+        // Landscape: a full-height pitch beside the controls, so shirts stay readable.
         if (maxWidth > maxHeight && maxWidth >= 600.dp) {
             val controlsWidth = maxWidth * 0.42f
             Row(Modifier.fillMaxSize()) {
@@ -163,47 +186,37 @@ fun DraftScreen(
                     Modifier
                         .width(controlsWidth)
                         .fillMaxHeight()
-                        .verticalScroll(rememberScrollState()),
+                        .verticalScroll(rememberScrollState())
+                        .navigationBarsPadding(),
                 ) {
-                    DraftHeader(session, ratings, requestLeave)
-                    Spacer(Modifier.height(12.dp))
-                    SpinPanel(
-                        session = session,
-                        reel = reel,
-                        spinning = spinning,
-                        onRespin = onRespin,
-                        onPickPlayer = { openSheet(null) },
-                        onAppointManager = onAppointManager,
-                        onPlay = onPlay,
-                        shape = MaterialTheme.shapes.extraLarge,
-                        modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
-                    )
+                    DraftTopBar(session, requestLeave)
+                    RatingsRow(ratings, visible = session.ratingsVisible)
+                    spinPanel(Modifier.padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 12.dp))
                 }
                 PitchArea(
                     session, spinning, lastPickedId, onSlotClick,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .navigationBarsPadding(),
+                        .navigationBarsPadding()
+                        .padding(start = 8.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
                 )
             }
         } else {
-            Column(Modifier.fillMaxSize()) {
-                DraftHeader(session, ratings, requestLeave)
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .navigationBarsPadding(),
+            ) {
+                DraftTopBar(session, requestLeave)
+                RatingsRow(ratings, visible = session.ratingsVisible)
+                spinPanel(Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
                 PitchArea(
                     session, spinning, lastPickedId, onSlotClick,
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth(),
-                )
-                SpinPanel(
-                    session = session,
-                    reel = reel,
-                    spinning = spinning,
-                    onRespin = onRespin,
-                    onPickPlayer = { openSheet(null) },
-                    onAppointManager = onAppointManager,
-                    onPlay = onPlay,
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 12.dp),
                 )
             }
         }
@@ -225,35 +238,50 @@ fun DraftScreen(
     if (showLeaveDialog) {
         AlertDialog(
             onDismissRequest = { showLeaveDialog = false },
+            containerColor = DugoutRaised,
             title = { Text(stringResource(R.string.draft_leave_title)) },
             text = { Text(stringResource(R.string.draft_leave_body)) },
             confirmButton = {
                 TextButton(onClick = {
                     showLeaveDialog = false
                     onLeave()
-                }) { Text(stringResource(R.string.draft_leave_confirm)) }
+                }) { Text(stringResource(R.string.draft_leave_confirm), color = Hot) }
             },
             dismissButton = {
-                TextButton(onClick = { showLeaveDialog = false }) { Text(stringResource(R.string.draft_leave_cancel)) }
+                TextButton(onClick = { showLeaveDialog = false }) {
+                    Text(stringResource(R.string.draft_leave_cancel), color = Chalk)
+                }
             },
         )
     }
 }
 
+/** Back, the challenge in its colours, then how far the draft has got and the shape it's filling. */
 @Composable
-private fun DraftHeader(session: DraftSession, ratings: TeamRatings, onBack: () -> Unit) {
-    ScreenHeader(
-        mode = session.mode,
-        title = if (session.isComplete) {
-            stringResource(R.string.draft_complete_progress)
-        } else {
-            stringResource(R.string.draft_pick_progress, session.picks.size + 1, session.formation.slots.size)
-        },
-        onBack = onBack,
+private fun DraftTopBar(session: DraftSession, onBack: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Eyebrow(session.formation.label, Modifier.padding(end = 12.dp), color = Chalk)
+        SquareIconButton(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.cd_back), onBack)
+        ChallengeMark(session.mode.challenge, MaterialTheme.typography.headlineLarge)
+        Spacer(Modifier.weight(1f))
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = if (session.isComplete) {
+                    stringResource(R.string.draft_complete_progress)
+                } else {
+                    stringResource(R.string.draft_pick_progress, session.picks.size + 1, session.formation.slots.size)
+                },
+                style = MaterialTheme.typography.titleSmall,
+                color = Chalk,
+            )
+            Eyebrow(session.formation.label)
+        }
     }
-    RatingsRow(ratings, visible = session.ratingsVisible)
 }
 
 @Composable
@@ -268,13 +296,13 @@ private fun RatingsRow(ratings: TeamRatings, visible: Boolean) {
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        StatBlock(shown(ratings.overall), stringResource(R.string.stat_overall), valueColor = Floodlight)
-        StatBlock(shown(ratings.attack.roundToInt()), stringResource(R.string.stat_attack))
-        StatBlock(shown(ratings.defence.roundToInt()), stringResource(R.string.stat_defence))
-        StatBlock("${ratings.chemistry}/${TeamRatings.MAX_CHEMISTRY}", stringResource(R.string.stat_chemistry))
+        StatTile(shown(ratings.overall), stringResource(R.string.stat_overall), Modifier.weight(1f), valueColor = Floodlight)
+        StatTile(shown(ratings.attack.roundToInt()), stringResource(R.string.stat_attack), Modifier.weight(1f))
+        StatTile(shown(ratings.defence.roundToInt()), stringResource(R.string.stat_defence), Modifier.weight(1f))
+        StatTile("${ratings.chemistry}/${TeamRatings.MAX_CHEMISTRY}", stringResource(R.string.stat_chemistry), Modifier.weight(1f))
     }
 }
 
@@ -286,9 +314,10 @@ private fun PitchArea(
     onSlotClick: (Slot) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
-        PitchMarkings(Modifier.fillMaxSize())
-        FormationLayout(session, spinning, lastPickedId, onSlotClick)
+    PitchCard(modifier) {
+        Box(Modifier.padding(horizontal = 4.dp, vertical = 6.dp)) {
+            FormationLayout(session, spinning, lastPickedId, onSlotClick)
+        }
     }
 }
 
@@ -301,7 +330,7 @@ private fun FormationLayout(
 ) {
     // One pulse shared by every glowing slot, read only when drawing.
     val glow = rememberInfiniteTransition(label = "slotGlow").animateFloat(
-        initialValue = 0.55f,
+        initialValue = 0.5f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
         label = "slotGlowAlpha",
@@ -310,15 +339,15 @@ private fun FormationLayout(
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val formation = session.formation
         val perRow = formation.slots.groupingBy { it.row }.eachCount().values.max()
-        val gap = 8.dp
+        val gap = 6.dp
         val rowHeight = maxHeight / formation.rows
-        // Floor keeps shapes valid when the pitch gets squeezed (large fonts, short screens); stickers may overlap then.
+        // Floor keeps shapes valid when the pitch gets squeezed (large fonts, short screens); tokens may overlap then.
         val slotWidth = minOf(
             (maxWidth - gap * (perRow + 1)) / perRow,
-            (rowHeight - gap) / STICKER_ASPECT,
-            96.dp,
+            (rowHeight - gap) / TOKEN_ASPECT,
+            88.dp,
         ).coerceAtLeast(MIN_SLOT_WIDTH)
-        val slotHeight = slotWidth * STICKER_ASPECT
+        val slotHeight = slotWidth * TOKEN_ASPECT
 
         formation.slots.forEach { slot ->
             val left = (maxWidth * slot.x - slotWidth / 2).coerceIn(0.dp, maxWidth - slotWidth)
@@ -331,9 +360,8 @@ private fun FormationLayout(
                 } else {
                     stringResource(R.string.cd_slot_filled_hidden, slot.label, pick.player.name)
                 }
-                PlayerSticker(
+                PlayerToken(
                     pick = pick,
-                    slotLabel = slot.label,
                     width = slotWidth,
                     showRating = session.ratingsVisible,
                     animateEntry = pick.player.id == lastPickedId,
@@ -360,7 +388,7 @@ private fun FormationLayout(
                     highlighted = highlighted,
                     glow = glow::value,
                     modifier = slotModifier
-                        .clip(RoundedCornerShape(slotWidth * 0.1f))
+                        .clip(RoundedCornerShape(slotWidth * 0.3f))
                         .clickable(enabled = clickable) { onSlotClick(slot) }
                         .semantics { contentDescription = description }
                         .testTag("slot_${slot.id}"),
@@ -379,97 +407,60 @@ private fun SpinPanel(
     onPickPlayer: () -> Unit,
     onAppointManager: (String) -> Unit,
     onPlay: () -> Unit,
-    shape: Shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        color = Dugout,
-        shape = shape,
-        modifier = modifier.fillMaxWidth(),
+    Column(
+        modifier
+            .fillMaxWidth()
+            .panel(RoundedCornerShape(18.dp))
+            .padding(14.dp),
     ) {
-        Column(
-            Modifier
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 18.dp),
-        ) {
-            val target = session.targetSlot
-            when {
-                session.needsManager -> ManagerChoice(session.managerOptions, onAppointManager)
+        val target = session.targetSlot
+        when {
+            session.needsManager -> ManagerChoice(session.managerOptions, onAppointManager)
 
-                session.isComplete -> {
-                    Eyebrow(stringResource(R.string.draft_xi_ready))
-                    session.manager?.let {
-                        Text(
-                            stringResource(R.string.draft_manager_appointed, it.name),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Chalk,
-                            modifier = Modifier.padding(top = 4.dp),
-                        )
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    PrimaryButton(stringResource(session.mode.playActionRes), onPlay, Modifier.testTag("play"))
-                }
-
-                session.awaitingSlotChoice -> {
+            session.isComplete -> {
+                Eyebrow(stringResource(R.string.draft_xi_ready), color = Floodlight)
+                session.manager?.let {
                     Text(
-                        stringResource(R.string.draft_choose_slot).uppercase(),
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = Chalk,
-                    )
-                    Text(
-                        stringResource(R.string.draft_choose_slot_detail),
+                        stringResource(R.string.draft_manager_appointed, it.name),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = ChalkMuted,
+                        color = Chalk,
+                        modifier = Modifier.padding(top = 2.dp),
                     )
                 }
+                Spacer(Modifier.height(12.dp))
+                PrimaryButton(stringResource(session.mode.playActionRes), onPlay, Modifier.testTag("play"))
+            }
 
-                reel == null -> Text(stringResource(R.string.draft_no_squads), color = ChalkMuted)
+            session.awaitingSlotChoice -> {
+                Text(
+                    stringResource(R.string.draft_choose_slot),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Chalk,
+                )
+                Text(
+                    stringResource(R.string.draft_choose_slot_detail),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = ChalkMuted,
+                )
+            }
 
-                else -> {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        ClubBadge(reel, 52.dp)
-                        Spacer(Modifier.width(14.dp))
-                        Column(Modifier.weight(1f)) {
-                            Eyebrow(
-                                if (target != null) {
-                                    stringResource(R.string.draft_spin_for_slot, target.label)
-                                } else {
-                                    stringResource(R.string.draft_spin_label)
-                                },
-                            )
-                            AnimatedContent(
-                                targetState = reel,
-                                transitionSpec = {
-                                    (slideInVertically(tween(90)) { -it } + fadeIn(tween(90)))
-                                        .togetherWith(slideOutVertically(tween(90)) { it } + fadeOut(tween(90)))
-                                },
-                                label = "reel",
-                            ) { squad ->
-                                Column {
-                                    Text(squad.club.uppercase(), style = MaterialTheme.typography.headlineMedium, color = Chalk, maxLines = 1)
-                                    Text(squad.season, style = MaterialTheme.typography.bodyMedium, color = ChalkMuted)
-                                }
-                            }
-                        }
-                        if (session.settings.difficulty.respins > 0) {
-                            TextButton(
-                                onClick = onRespin,
-                                enabled = session.respinsLeft > 0 && !spinning,
-                                modifier = Modifier.testTag("respin"),
-                            ) {
-                                Icon(painterResource(R.drawable.ic_refresh), contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Column(horizontalAlignment = Alignment.Start) {
-                                    Text(stringResource(R.string.draft_respin))
-                                    Text(
-                                        pluralStringResource(R.plurals.draft_respins_left, session.respinsLeft, session.respinsLeft),
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(14.dp))
+            reel == null -> Text(stringResource(R.string.draft_no_squads), color = ChalkMuted)
+
+            else -> {
+                if (target != null) {
+                    Eyebrow(
+                        stringResource(R.string.draft_spin_for_slot, target.label),
+                        color = Floodlight,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                    )
+                }
+                SpinReadout(reel)
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     PrimaryButton(
                         text = if (target != null) {
                             stringResource(R.string.draft_pick_for_slot, target.label)
@@ -478,17 +469,121 @@ private fun SpinPanel(
                         },
                         onClick = onPickPlayer,
                         enabled = !spinning,
-                        modifier = Modifier.testTag("pick_player"),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("pick_player"),
                     )
+                    if (session.settings.difficulty.respins > 0) {
+                        RespinButton(session.respinsLeft, enabled = session.respinsLeft > 0 && !spinning, onRespin)
+                    }
                 }
+                Text(
+                    stringResource(R.string.draft_spin_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ChalkMuted,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                )
+            }
+        }
+    }
+}
+
+/** The spin as two halves, club and season, each flicking through the reel. */
+@Composable
+private fun SpinReadout(reel: ClubSeason) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            .panel(RoundedCornerShape(14.dp), color = DugoutRaised)
+            .padding(vertical = 10.dp),
+    ) {
+        ReadoutHalf(stringResource(R.string.draft_spin_club)) {
+            ReelText(reel) { squad ->
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ClubBadge(squad, 30.dp, showCode = false)
+                    Text(squad.code, style = MaterialTheme.typography.headlineLarge, color = Chalk, maxLines = 1)
+                }
+                Text(
+                    squad.club,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ChalkMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Box(
+            Modifier
+                .fillMaxHeight()
+                .width(1.dp)
+                .background(ChalkLine),
+        )
+        ReadoutHalf(stringResource(R.string.draft_spin_season)) {
+            ReelText(reel) { squad ->
+                Text(squad.season, style = MaterialTheme.typography.headlineLarge, color = Chalk, maxLines = 1)
+                Text(" ", style = MaterialTheme.typography.bodySmall)
             }
         }
     }
 }
 
 @Composable
+private fun RowScope.ReadoutHalf(label: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        Modifier
+            .weight(1f)
+            .padding(horizontal = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = ChalkMuted)
+        content()
+    }
+}
+
+@Composable
+private fun ReelText(reel: ClubSeason, content: @Composable ColumnScope.(ClubSeason) -> Unit) {
+    AnimatedContent(
+        targetState = reel,
+        transitionSpec = {
+            (slideInVertically(tween(90)) { -it } + fadeIn(tween(90)))
+                .togetherWith(slideOutVertically(tween(90)) { it } + fadeOut(tween(90)))
+        },
+        label = "reel",
+    ) { squad ->
+        Column(horizontalAlignment = Alignment.CenterHorizontally) { content(squad) }
+    }
+}
+
+@Composable
+private fun RespinButton(left: Int, enabled: Boolean, onRespin: () -> Unit) {
+    val shape = RoundedCornerShape(14.dp)
+    val description = "${stringResource(R.string.draft_respin)}, " +
+        pluralStringResource(R.plurals.draft_respins_left, left, left)
+    Column(
+        Modifier
+            .size(52.dp)
+            .alpha(if (enabled) 1f else 0.4f)
+            .clip(shape)
+            .background(DugoutRaised)
+            .border(1.dp, ChalkLine, shape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onRespin)
+            .clearAndSetSemantics { contentDescription = description }
+            .testTag("respin"),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(painterResource(R.drawable.ic_refresh), contentDescription = null, tint = Chalk, modifier = Modifier.size(18.dp))
+        Text(left.toString(), style = MaterialTheme.typography.labelMedium, color = Floodlight)
+    }
+}
+
+@Composable
 private fun ManagerChoice(options: List<Manager>, onAppoint: (String) -> Unit) {
-    Eyebrow(stringResource(R.string.draft_appoint_manager))
+    Eyebrow(stringResource(R.string.draft_appoint_manager), color = Floodlight)
     Spacer(Modifier.height(10.dp))
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEach { manager ->
@@ -509,14 +604,7 @@ private fun ManagerChoice(options: List<Manager>, onAppoint: (String) -> Unit) {
                     Text(stringResource(manager.trait.detailRes), style = MaterialTheme.typography.bodySmall, color = ChalkMuted)
                 }
                 Spacer(Modifier.width(10.dp))
-                Surface(color = Dugout, shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, Floodlight)) {
-                    Text(
-                        stringResource(manager.trait.titleRes),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Floodlight,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    )
-                }
+                Pill(stringResource(manager.trait.titleRes))
             }
         }
     }
@@ -554,7 +642,7 @@ private fun SquadSheet(
                     ClubBadge(squad, 48.dp)
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(squad.club.uppercase(), style = MaterialTheme.typography.headlineMedium, color = Chalk)
+                        Text(squad.club, style = MaterialTheme.typography.headlineMedium, color = Chalk)
                         Text(
                             text = if (slot == null) {
                                 "${squad.season} · ${stringResource(R.string.draft_sheet_hint)}"
@@ -570,7 +658,7 @@ private fun SquadSheet(
             if (slot != null && !lockedToSlot) {
                 item {
                     TextButton(onClick = onShowWholeSquad, modifier = Modifier.padding(horizontal = 8.dp)) {
-                        Text(stringResource(R.string.draft_show_whole_squad))
+                        Text(stringResource(R.string.draft_show_whole_squad), color = Floodlight)
                     }
                 }
             }
@@ -586,6 +674,7 @@ private fun SquadSheet(
                                 Text(
                                     "${stringResource(R.string.draft_respin)} · " +
                                         pluralStringResource(R.plurals.draft_respins_left, session.respinsLeft, session.respinsLeft),
+                                    color = Floodlight,
                                 )
                             }
                         }
@@ -637,12 +726,12 @@ private fun SquadRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = enabled && available) { onPick(slot?.id) }
-            .alpha(if (available) 1f else 0.45f)
+            .alpha(if (available) 1f else 0.4f)
             .padding(horizontal = 20.dp, vertical = 8.dp)
             .testTag(if (available) "eligible_player" else "unavailable_player"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RatingTile(player.rating, hidden = !session.ratingsVisible)
+        RatingBadge(player.rating, 40.dp, hidden = !session.ratingsVisible)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(player.name, style = MaterialTheme.typography.titleMedium, color = Chalk)
@@ -657,15 +746,15 @@ private fun SquadRow(
                     Surface(
                         onClick = { onPick(target.id) },
                         enabled = enabled,
-                        color = Dugout,
+                        color = Hot.copy(alpha = 0.14f),
                         shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, Floodlight),
+                        border = BorderStroke(1.dp, Hot.copy(alpha = 0.7f)),
                         modifier = Modifier.semantics { contentDescription = description },
                     ) {
                         Text(
                             target.label,
                             style = MaterialTheme.typography.labelLarge,
-                            color = Floodlight,
+                            color = Chalk,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                         )
                     }

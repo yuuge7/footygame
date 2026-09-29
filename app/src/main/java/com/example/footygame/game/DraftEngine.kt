@@ -9,6 +9,7 @@ import com.example.footygame.models.DraftSession
 import com.example.footygame.models.DraftSettings
 import com.example.footygame.models.DraftStyle
 import com.example.footygame.models.Manager
+import kotlin.math.pow
 import kotlin.random.Random
 
 class DraftEngine(
@@ -69,9 +70,8 @@ class DraftEngine(
         val candidates = poolFor(session.mode, session.settings).filter(fits)
             .ifEmpty { poolFor(session.mode, session.settings.copy(era = null)).filter(fits) }
         val fresh = candidates.filter { it.id !in session.recentSpinIds && it.id != session.spin?.id }
-        val next = fresh.ifEmpty { candidates.filter { it.id != session.spin?.id } }
-            .ifEmpty { candidates }
-            .randomOrNull(random)
+        val choices = fresh.ifEmpty { candidates.filter { it.id != session.spin?.id } }.ifEmpty { candidates }
+        val next = if (session.mode.favoursStrongSquads) choices.weightedRandomOrNull() else choices.randomOrNull(random)
         return session.copy(
             spin = next,
             spinNumber = session.spinNumber + 1,
@@ -79,8 +79,31 @@ class DraftEngine(
         )
     }
 
-    private companion object {
-        const val RECENT_MEMORY = 4
-        const val MANAGER_CHOICES = 3
+    /**
+     * Each rating point of [strength] above the weakest choice makes a squad [STRENGTH_ODDS] times as
+     * likely. Over the English pools that lifts title-calibre sides (84+) from about one spin in six to
+     * nearly one in three, while every squad keeps a chance.
+     */
+    private fun List<ClubSeason>.weightedRandomOrNull(): ClubSeason? {
+        if (isEmpty()) return null
+        val strengths = map(::strength)
+        val weakest = strengths.min()
+        val weights = strengths.map { STRENGTH_ODDS.pow(it - weakest) }
+        var roll = random.nextDouble() * weights.sum()
+        weights.forEachIndexed { index, weight ->
+            roll -= weight
+            if (roll < 0) return this[index]
+        }
+        return last()
+    }
+
+    companion object {
+        private const val RECENT_MEMORY = 4
+        private const val MANAGER_CHOICES = 3
+        private const val STRENGTH_ODDS = 1.08
+
+        /** Average rating of a squad's best eleven: how good an XI drafted from it could be. */
+        fun strength(squad: ClubSeason): Double =
+            squad.players.map { it.rating }.sortedDescending().take(11).average()
     }
 }

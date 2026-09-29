@@ -8,23 +8,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-// One committed look: a floodlit night pitch. The game ignores the system light/dark setting on purpose.
+// One committed look: a floodlit stadium at night. The game ignores the system light/dark setting on purpose.
 private val FootyColors = darkColorScheme(
-    primary = Floodlight,
-    onPrimary = Ink,
+    primary = Hot,
+    onPrimary = Chalk,
     primaryContainer = DugoutRaised,
     onPrimaryContainer = Chalk,
-    secondary = StickerPaper,
+    secondary = Floodlight,
     onSecondary = Ink,
     secondaryContainer = DugoutRaised,
     onSecondaryContainer = Chalk,
-    background = Pitch,
+    tertiary = Violet,
+    onTertiary = Chalk,
+    background = Night,
     onBackground = Chalk,
     surface = Dugout,
     onSurface = Chalk,
     surfaceVariant = DugoutRaised,
     onSurfaceVariant = ChalkMuted,
-    surfaceContainerLowest = Dugout,
+    surfaceContainerLowest = Night,
     surfaceContainerLow = Dugout,
     surfaceContainer = Dugout,
     surfaceContainerHigh = DugoutRaised,
@@ -32,15 +34,15 @@ private val FootyColors = darkColorScheme(
     outline = ChalkMuted,
     outlineVariant = ChalkLine,
     error = ResultLoss,
-    onError = Ink,
+    onError = Chalk,
     scrim = Color.Black,
 )
 
 private val FootyShapes = Shapes(
     small = RoundedCornerShape(8.dp),
-    medium = RoundedCornerShape(14.dp),
-    large = RoundedCornerShape(22.dp),
-    extraLarge = RoundedCornerShape(28.dp),
+    medium = RoundedCornerShape(12.dp),
+    large = RoundedCornerShape(16.dp),
+    extraLarge = RoundedCornerShape(24.dp),
 )
 
 @Composable
