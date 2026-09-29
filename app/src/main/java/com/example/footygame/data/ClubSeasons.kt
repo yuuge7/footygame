@@ -57,6 +57,11 @@ object ClubSeasons {
         }
     }
 
+    private val byId: Map<String, ClubSeason> by lazy { all.associateBy { it.id } }
+
+    /** A squad by id, for careers that store ids and rebuild squads on load. */
+    fun squad(id: String): ClubSeason? = byId[id]
+
     fun poolFor(mode: DraftMode): List<ClubSeason> = all.filter { it.pool in mode.pools }
 
     /** The squads a draft can spin: the mode's pool, narrowed to the era, at season or prime ratings. */

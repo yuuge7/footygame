@@ -53,7 +53,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.footygame.R
 import com.example.footygame.data.ModeRecord
+import com.example.footygame.game.Dynasty
 import com.example.footygame.models.DraftMode
+import com.example.footygame.models.DynastyPhase
+import com.example.footygame.models.DynastyState
+import com.example.footygame.models.ProPhase
+import com.example.footygame.models.ProState
 import com.example.footygame.theme.Chalk
 import com.example.footygame.theme.ChalkLine
 import com.example.footygame.theme.ChalkMuted
@@ -62,6 +67,7 @@ import com.example.footygame.theme.DugoutRaised
 import com.example.footygame.theme.Floodlight
 import com.example.footygame.theme.HeadlineGradient
 import com.example.footygame.theme.Hot
+import com.example.footygame.theme.ResultWin
 import com.example.footygame.ui.components.ChallengeMark
 import com.example.footygame.ui.components.Eyebrow
 import com.example.footygame.ui.components.Pill
@@ -74,6 +80,10 @@ fun MainMenuScreen(
     records: Map<DraftMode, ModeRecord>,
     onModeSelected: (DraftMode) -> Unit,
     onOpenStats: () -> Unit,
+    dynasty: DynastyState? = null,
+    pro: ProState? = null,
+    onDynasty: () -> Unit = {},
+    onPro: () -> Unit = {},
 ) {
     var showHowToPlay by rememberSaveable { mutableStateOf(false) }
     // Play the entrance once per visit to the app, not every time the user comes back to the menu.
@@ -132,6 +142,29 @@ fun MainMenuScreen(
             ) {
                 ModeCard(mode = mode, record = records[mode] ?: ModeRecord(), onClick = { onModeSelected(mode) })
             }
+        }
+        item(key = "careers_header") {
+            Eyebrow(stringResource(R.string.career_modes), Modifier.padding(top = 12.dp))
+        }
+        item(key = "career_dynasty") {
+            CareerCard(
+                kicker = stringResource(R.string.dynasty_kicker),
+                title = stringResource(R.string.dynasty_title),
+                description = stringResource(R.string.dynasty_card_description),
+                status = dynasty?.let { dynastyStatus(it) },
+                onClick = onDynasty,
+                modifier = Modifier.testTag("career_dynasty"),
+            )
+        }
+        item(key = "career_pro") {
+            CareerCard(
+                kicker = stringResource(R.string.pro_kicker),
+                title = stringResource(R.string.pro_title),
+                description = stringResource(R.string.pro_card_description),
+                status = pro?.let { proStatus(it) },
+                onClick = onPro,
+                modifier = Modifier.testTag("career_pro"),
+            )
         }
         item(key = "stats") {
             SecondaryButton(
@@ -206,6 +239,60 @@ private fun ModeCard(mode: DraftMode, record: ModeRecord, onClick: () -> Unit) {
             )
         }
     }
+}
+
+/** A career mode: green kicker like a contract, the title, and where a saved career stands. */
+@Composable
+private fun CareerCard(
+    kicker: String,
+    title: String,
+    description: String,
+    status: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(18.dp),
+        color = Dugout.copy(alpha = 0.92f),
+        border = BorderStroke(1.dp, if (status != null) ResultWin.copy(alpha = 0.5f) else ChalkLine),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 18.dp, end = 10.dp, top = 16.dp, bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Eyebrow(kicker, color = ResultWin)
+                Text(title, style = MaterialTheme.typography.headlineSmall, color = Chalk)
+                Text(description, style = MaterialTheme.typography.bodyMedium, color = ChalkMuted)
+                if (status != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Eyebrow(status, color = Floodlight)
+                }
+            }
+            Icon(
+                painter = painterResource(R.drawable.ic_expand_more),
+                contentDescription = null,
+                tint = ChalkMuted,
+                modifier = Modifier.rotate(-90f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun dynastyStatus(state: DynastyState): String = when (state.phase) {
+    DynastyPhase.DRAFT -> stringResource(R.string.career_status_draft)
+    DynastyPhase.FINISHED -> stringResource(R.string.career_status_finished)
+    else -> stringResource(R.string.career_status_season, state.season, Dynasty.SEASONS)
+}
+
+@Composable
+private fun proStatus(state: ProState): String = when (state.phase) {
+    ProPhase.RETIRED -> stringResource(R.string.career_status_finished)
+    ProPhase.FIRST_CLUB -> stringResource(R.string.career_status_first_club)
+    else -> stringResource(R.string.career_status_pro, state.season, state.club)
 }
 
 @Composable

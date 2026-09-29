@@ -45,6 +45,8 @@ data class RunState(
     /** How many matches the results screen has revealed so far. */
     val revealed: Int = 0,
     val isNewBest: Boolean = false,
+    /** The European campaign has been played on its own screen, so its result may show on the season's. */
+    val europeSeen: Boolean = false,
 ) {
     val isAwaitingJanuary: Boolean get() = result == null && revealed >= matches.size
     val isRevealComplete: Boolean get() = result != null && revealed >= matches.size
@@ -118,6 +120,10 @@ class GameViewModel(
         val draft = state.draft ?: return
         val run = state.run?.takeIf { it.isAwaitingJanuary && event in it.januaryOffers } ?: return
         advance(simulator.simulate(draft, run.seed, event), run)
+    }
+
+    fun markEuropeSeen() {
+        _uiState.update { state -> state.copy(run = state.run?.copy(europeSeen = true)) }
     }
 
     fun skipReveal() {

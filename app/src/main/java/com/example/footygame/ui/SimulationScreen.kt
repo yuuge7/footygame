@@ -54,7 +54,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.footygame.R
 import com.example.footygame.game.RunHighlights
 import com.example.footygame.models.DraftSession
-import com.example.footygame.models.EuropeanRun
+import com.example.footygame.models.CupRun
 import com.example.footygame.models.JanuaryEvent
 import com.example.footygame.models.JanuaryOutcome
 import com.example.footygame.models.MatchResult
@@ -96,6 +96,7 @@ fun SimulationScreen(
     session: DraftSession,
     onSkip: () -> Unit,
     onChooseJanuary: (JanuaryEvent) -> Unit,
+    onPlayEurope: () -> Unit,
     onRunItBack: () -> Unit,
     onNewDraft: () -> Unit,
     onMenu: () -> Unit,
@@ -152,9 +153,23 @@ fun SimulationScreen(
                 if (complete && result != null) {
                     item(key = "scoreboard") { Scoreboard(shown, run.mode.matches, Modifier.padding(bottom = 16.dp)) }
                     item(key = "verdict") { VerdictCard(result, run.isNewBest) }
+                    // Europe is its own screen: invited here until played, then its result.
+                    result.europe?.let { europe ->
+                        item(key = "europe") {
+                            if (run.europeSeen) {
+                                CupCard(
+                                    europe,
+                                    Modifier
+                                        .padding(top = 16.dp)
+                                        .testTag("europe"),
+                                )
+                            } else {
+                                CupInvite(europe.competition, onPlayEurope, Modifier.padding(top = 16.dp))
+                            }
+                        }
+                    }
                     item(key = "summary") { SummaryStats(result) }
                     item(key = "highlights") { Highlights(result) }
-                    result.europe?.let { europe -> item(key = "europe") { EuropeCard(europe) } }
                     if (result.table.isNotEmpty()) item(key = "table") { TablePreview(result.table) }
                     if (result.topScorers.isNotEmpty()) item(key = "scorers") { TopScorers(result) }
                     item(key = "fixtures_header") {
@@ -169,7 +184,7 @@ fun SimulationScreen(
                     }
                 }
                 val europe = result?.europe
-                if (complete && europe != null) {
+                if (complete && europe != null && run.europeSeen) {
                     item(key = "europe_header") {
                         Eyebrow(stringResource(R.string.europe_fixtures), modifier = Modifier.padding(top = 24.dp, bottom = 4.dp))
                     }
@@ -221,115 +236,6 @@ fun SimulationScreen(
 
     if (run.isAwaitingJanuary) {
         JanuaryDialog(shown, run.januaryOffers, onChooseJanuary)
-    }
-}
-
-/** The run can't continue until one gamble is chosen, so the dialog can't be dismissed. */
-@Composable
-private fun JanuaryDialog(played: List<MatchResult>, offers: List<JanuaryEvent>, onChoose: (JanuaryEvent) -> Unit) {
-    AlertDialog(
-        onDismissRequest = {},
-        properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
-        containerColor = DugoutRaised,
-        title = { Text(stringResource(R.string.january_title), style = MaterialTheme.typography.headlineMedium) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    stringResource(R.string.january_body, played.wins, played.draws, played.losses),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = ChalkMuted,
-                )
-                offers.forEach { event ->
-                    val shape = MaterialTheme.shapes.medium
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(shape)
-                            .background(Dugout)
-                            .border(1.dp, ChalkLine, shape)
-                            .clickable { onChoose(event) }
-                            .padding(horizontal = 14.dp, vertical = 12.dp)
-                            .testTag("january_option"),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                    ) {
-                        Text(stringResource(event.titleRes), style = MaterialTheme.typography.titleMedium, color = Floodlight)
-                        Text(stringResource(event.detailRes), style = MaterialTheme.typography.bodySmall, color = Chalk)
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-    )
-}
-
-@Composable
-private fun JanuaryRow(outcome: JanuaryOutcome) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(vertical = 10.dp)
-            .clip(MaterialTheme.shapes.medium)
-            .background(DugoutRaised)
-            .padding(horizontal = 14.dp, vertical = 12.dp)
-            .testTag("january_outcome"),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Eyebrow(
-            "${stringResource(R.string.january_row_label)} · ${stringResource(outcome.event.titleRes)}",
-            color = if (outcome.success) Floodlight else ResultLoss,
-        )
-        Text(januaryStory(outcome), style = MaterialTheme.typography.bodyMedium, color = Chalk)
-    }
-}
-
-@Composable
-private fun Scoreboard(shown: List<MatchResult>, total: Int, modifier: Modifier = Modifier) {
-    val perfect = shown.wins == shown.size
-    val progress = if (total == 0) 0f else shown.size / total.toFloat()
-
-    Column(
-        modifier
-            .fillMaxWidth()
-            .panel(RoundedCornerShape(18.dp))
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Eyebrow(stringResource(R.string.run_record))
-        RecordNumbers(
-            shown.wins,
-            shown.draws,
-            shown.losses,
-            style = MaterialTheme.typography.displayMedium,
-            modifier = Modifier.padding(vertical = 2.dp),
-        )
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(6.dp)
-                .clip(CircleShape)
-                .background(ChalkLine),
-        ) {
-            Box(
-                Modifier
-                    .fillMaxWidth(progress)
-                    .fillMaxHeight()
-                    .clip(CircleShape)
-                    .background(Brush.horizontalGradient(BrandGradient)),
-            )
-        }
-        Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .size(8.dp)
-                    .background(if (perfect) ResultWin else ResultLoss, CircleShape),
-            )
-            Spacer(Modifier.width(8.dp))
-            Eyebrow(
-                stringResource(if (perfect) R.string.run_perfect_so_far else R.string.run_perfect_over),
-                color = Chalk,
-            )
-        }
     }
 }
 
@@ -415,199 +321,4 @@ private fun verdictDetail(result: RunResult): String? {
         stringResource(R.string.verdict_first_dropped, stageLabel(it.stage), "${it.goalsFor}-${it.goalsAgainst}", it.opponent.name)
     }
     return listOfNotNull(beatenBy, dropped).joinToString(" ").ifEmpty { null }
-}
-
-@Composable
-private fun EuropeCard(europe: EuropeanRun) {
-    val competition = stringResource(europe.competition.titleRes)
-    val headline = when (val verdict = europe.verdict) {
-        Verdict.Champions -> stringResource(R.string.europe_won, competition)
-        is Verdict.Eliminated -> if (verdict.stage.type == StageType.LEAGUE_PHASE) {
-            stringResource(R.string.europe_out_league_phase, competition)
-        } else {
-            stringResource(R.string.europe_knocked_out, competition, stageName(verdict.stage.type))
-        }
-        is Verdict.LeagueFinish -> competition
-    }
-    val won = europe.verdict == Verdict.Champions
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(top = 24.dp)
-            .panel(
-                RoundedCornerShape(18.dp),
-                color = DugoutRaised,
-                edge = if (won) Floodlight.copy(alpha = 0.55f) else ChalkLine,
-            )
-            .padding(16.dp)
-            .testTag("europe"),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Eyebrow(stringResource(R.string.europe_title), color = if (won) Floodlight else ChalkMuted)
-        Text(headline, style = MaterialTheme.typography.headlineSmall, color = Chalk)
-        RecordNumbers(
-            europe.matches.wins,
-            europe.matches.draws,
-            europe.matches.losses,
-            style = MaterialTheme.typography.headlineMedium,
-            gap = 8.dp,
-        )
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun SummaryStats(result: RunResult) {
-    FlowRow(
-        Modifier
-            .fillMaxWidth()
-            .padding(top = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        StatBlock(result.goalsFor.toString(), stringResource(R.string.summary_goals_for))
-        StatBlock(result.goalsAgainst.toString(), stringResource(R.string.summary_goals_against))
-        StatBlock(result.cleanSheets.toString(), stringResource(R.string.summary_clean_sheets))
-        (result.verdict as? Verdict.LeagueFinish)?.let {
-            StatBlock(it.points.toString(), stringResource(R.string.summary_points), valueColor = Floodlight)
-        }
-    }
-}
-
-/** Stand-out numbers of the main competition; European nights have their own card. */
-@Composable
-private fun Highlights(result: RunResult) {
-    val highlights = remember(result) { RunHighlights.of(result.matches) }
-    Column(
-        Modifier
-            .padding(top = 24.dp)
-            .testTag("highlights"),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Eyebrow(stringResource(R.string.summary_highlights), modifier = Modifier.padding(bottom = 2.dp))
-        highlights.biggestWin?.let {
-            LabelledValue(
-                stringResource(R.string.highlight_biggest_win),
-                stringResource(R.string.highlight_score_against, it.goalsFor, it.goalsAgainst, it.opponent.name),
-            )
-        }
-        highlights.heaviestDefeat?.let {
-            LabelledValue(
-                stringResource(R.string.highlight_heaviest_defeat),
-                stringResource(R.string.highlight_score_against, it.goalsFor, it.goalsAgainst, it.opponent.name),
-            )
-        }
-        LabelledValue(
-            stringResource(R.string.highlight_win_streak),
-            pluralStringResource(R.plurals.highlight_matches, highlights.longestWinStreak, highlights.longestWinStreak),
-        )
-        LabelledValue(
-            stringResource(R.string.highlight_unbeaten),
-            pluralStringResource(R.plurals.highlight_matches, highlights.longestUnbeatenRun, highlights.longestUnbeatenRun),
-        )
-        LabelledValue(
-            stringResource(R.string.highlight_failed_to_score),
-            pluralStringResource(R.plurals.highlight_matches, highlights.failedToScore, highlights.failedToScore),
-        )
-    }
-}
-
-/** Top four, plus the user's row when they finished outside it. */
-@Composable
-private fun TablePreview(table: List<TableRow>) {
-    Column(Modifier.padding(top = 24.dp)) {
-        Eyebrow(stringResource(R.string.summary_table), modifier = Modifier.padding(bottom = 8.dp))
-        TableLine(
-            position = stringResource(R.string.table_position),
-            team = stringResource(R.string.table_team),
-            played = stringResource(R.string.table_played),
-            goalDifference = stringResource(R.string.table_goal_difference),
-            points = stringResource(R.string.table_points),
-            color = ChalkMuted,
-            bold = false,
-        )
-        table.withIndex().filter { it.index < 4 || it.value.isUser }.forEach { (index, row) ->
-            TableLine(
-                position = (index + 1).toString(),
-                team = if (row.isUser) stringResource(R.string.your_xi) else row.name,
-                played = row.played.toString(),
-                goalDifference = row.goalDifference.let { if (it > 0) "+$it" else it.toString() },
-                points = row.points.toString(),
-                color = if (row.isUser) Floodlight else Chalk,
-                bold = row.isUser,
-            )
-        }
-    }
-}
-
-@Composable
-private fun TableLine(
-    position: String,
-    team: String,
-    played: String,
-    goalDifference: String,
-    points: String,
-    color: Color,
-    bold: Boolean,
-) {
-    val style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal)
-    Row(Modifier.padding(vertical = 3.dp)) {
-        Text(position, style = style, color = color, modifier = Modifier.width(28.dp))
-        Text(team, style = style, color = color, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(played, style = style, color = color, modifier = Modifier.width(32.dp), textAlign = TextAlign.End)
-        Text(goalDifference, style = style, color = color, modifier = Modifier.width(44.dp), textAlign = TextAlign.End)
-        Text(points, style = style, color = color, modifier = Modifier.width(44.dp), textAlign = TextAlign.End)
-    }
-}
-
-@Composable
-private fun TopScorers(result: RunResult) {
-    Column(Modifier.padding(top = 24.dp)) {
-        Eyebrow(stringResource(R.string.summary_top_scorers), modifier = Modifier.padding(bottom = 8.dp))
-        result.topScorers.forEach { tally ->
-            Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(tally.player.name, style = MaterialTheme.typography.titleMedium, color = Chalk, modifier = Modifier.weight(1f))
-                Text(tally.goals.toString(), style = MaterialTheme.typography.headlineSmall, color = Floodlight)
-            }
-        }
-    }
-}
-
-@Composable
-private fun FixtureRow(match: MatchResult, names: Map<String, String>) {
-    val scorers = match.scorerIds
-        .groupingBy { it }
-        .eachCount()
-        .entries
-        .joinToString(", ") { (id, goals) -> names[id].orEmpty() + if (goals > 1) " $goals" else "" }
-    val notes = scoreNotes(match)
-
-    Column {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Eyebrow("${stageLabel(match.stage)} · ${venueLong(match.venue)}")
-                Text(match.opponent.name, style = MaterialTheme.typography.titleMedium, color = Chalk)
-                if (scorers.isNotEmpty()) {
-                    Text(scorers, style = MaterialTheme.typography.bodySmall, color = ChalkMuted)
-                }
-                if (notes != null) {
-                    Text(notes, style = MaterialTheme.typography.bodySmall, color = ChalkMuted)
-                }
-            }
-            Spacer(Modifier.width(12.dp))
-            Text(
-                "${match.goalsFor}-${match.goalsAgainst}",
-                style = MaterialTheme.typography.headlineMedium,
-                color = Chalk,
-            )
-            Spacer(Modifier.width(12.dp))
-            ResultPill(match.outcome, outcomeLetter(match.outcome))
-        }
-        HorizontalDivider(color = ChalkLine)
-    }
 }

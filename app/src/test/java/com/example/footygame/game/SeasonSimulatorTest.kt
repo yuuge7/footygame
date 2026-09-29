@@ -48,7 +48,33 @@ class SeasonSimulatorTest {
             assertEquals(result.wins * 3 + result.draws, verdict.points)
             assertNull(result.europe)
             assertNull(result.january)
+            assertNull(result.cup)
         }
+    }
+
+    @Test
+    fun careerSeasonsAddAnFaCupFromTheThirdRoundWithoutChangingTheLeague() {
+        val league = elite.getValue(DraftMode.EPL)
+        val withCup = league.withSettings { copy(domesticCup = true) }
+        var won = 0
+        repeat(40) { seed ->
+            val plainSeason = complete(league, seed.toLong())
+            val season = complete(withCup, seed.toLong())
+            assertEquals(plainSeason.matches, season.matches)
+            val cup = season.cup ?: error("no FA Cup in seed $seed")
+            assertEquals(Competition.FA_CUP, cup.competition)
+            assertEquals(StageType.THIRD_ROUND, cup.matches.first().stage.type)
+            assertTrue(cup.matches.size <= 6)
+            assertTrue(cup.matches.all { it.stage.type.isKnockout })
+            if (cup.won) {
+                won++
+                assertEquals(StageType.FINAL, cup.matches.last().stage.type)
+                assertTrue(season.trophies >= 1)
+            } else {
+                assertEquals((cup.verdict as Verdict.Eliminated).stage.type, cup.matches.last().stage.type)
+            }
+        }
+        assertTrue("an elite XI should win some cups, won $won", won > 0)
     }
 
     @Test

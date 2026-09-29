@@ -171,6 +171,7 @@ val Competition.titleRes: Int
         Competition.CHAMPIONS_LEAGUE -> R.string.competition_champions_league
         Competition.EUROPA_LEAGUE -> R.string.competition_europa_league
         Competition.CONFERENCE_LEAGUE -> R.string.competition_conference_league
+        Competition.FA_CUP -> R.string.mode_fac_title
     }
 
 /** One sentence on how the January gamble played out. */

@@ -2,7 +2,7 @@ package com.example.footygame.data
 
 import com.example.footygame.models.Competition
 import com.example.footygame.models.DraftMode
-import com.example.footygame.models.EuropeanRun
+import com.example.footygame.models.CupRun
 import com.example.footygame.models.MatchResult
 import com.example.footygame.models.Opponent
 import com.example.footygame.models.RunResult
@@ -50,7 +50,7 @@ class ModeRecordTest {
     @Test
     fun aEuropeanTrophyCountsToo() {
         val league = run(wins = 8, draws = 0, losses = 0, verdict = Verdict.LeagueFinish(position = 2, points = 24))
-        val withCup = league.copy(europe = EuropeanRun(Competition.EUROPA_LEAGUE, emptyList(), Verdict.Champions))
+        val withCup = league.copy(europe = CupRun(Competition.EUROPA_LEAGUE, emptyList(), Verdict.Champions))
         assertEquals(0, (ModeRecord() + league).trophies)
         assertEquals(1, (ModeRecord() + withCup).trophies)
     }

@@ -124,10 +124,21 @@ data class JanuaryOutcome(
     val defenceChange: Double = 0.0,
 )
 
-enum class Competition { CHAMPIONS_LEAGUE, EUROPA_LEAGUE, CONFERENCE_LEAGUE }
+enum class Competition {
+    CHAMPIONS_LEAGUE,
+    EUROPA_LEAGUE,
+    CONFERENCE_LEAGUE,
 
-/** The European campaign a top-seven league finish earns. */
-data class EuropeanRun(val competition: Competition, val matches: List<MatchResult>, val verdict: Verdict)
+    /** Career seasons only: a top-flight side's FA Cup, from the third round. */
+    FA_CUP;
+
+    val isEuropean: Boolean get() = this != FA_CUP
+}
+
+/** A cup campaign beside the league: the European run a top-seven finish earns, or a career side's FA Cup. */
+data class CupRun(val competition: Competition, val matches: List<MatchResult>, val verdict: Verdict) {
+    val won: Boolean get() = verdict == Verdict.Champions
+}
 
 data class RunResult(
     val mode: DraftMode,
@@ -137,7 +148,9 @@ data class RunResult(
     val topScorers: List<ScorerTally> = emptyList(),
     val manager: Manager? = null,
     val january: JanuaryOutcome? = null,
-    val europe: EuropeanRun? = null,
+    val europe: CupRun? = null,
+    /** The FA Cup run of a career season; null in the challenges. */
+    val cup: CupRun? = null,
 ) {
     val wins: Int get() = matches.wins
     val draws: Int get() = matches.draws
@@ -150,8 +163,8 @@ data class RunResult(
     val wonTrophy: Boolean
         get() = verdict == Verdict.Champions || (verdict as? Verdict.LeagueFinish)?.position == 1
 
-    /** The main trophy plus any European one. */
-    val trophies: Int get() = (if (wonTrophy) 1 else 0) + (if (europe?.verdict == Verdict.Champions) 1 else 0)
+    /** The main trophy plus any cup won beside it. */
+    val trophies: Int get() = listOf(wonTrophy, europe?.won == true, cup?.won == true).count { it }
 
     /** The first match that wasn't a win, i.e. where the perfect run ended. */
     val firstDropped: MatchResult? get() = matches.firstOrNull { it.outcome != Outcome.WIN }

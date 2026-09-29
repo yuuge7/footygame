@@ -8,7 +8,7 @@ import com.example.footygame.models.DraftMode
 import com.example.footygame.models.DraftPick
 import com.example.footygame.models.DraftSession
 import com.example.footygame.models.DraftSettings
-import com.example.footygame.models.EuropeanRun
+import com.example.footygame.models.CupRun
 import com.example.footygame.models.JanuaryEvent
 import com.example.footygame.models.JanuaryOutcome
 import com.example.footygame.models.Manager
@@ -164,12 +164,26 @@ class SeasonSimulator(
             )
             val user = standings.first { it.isUser }
             val position = standings.indexOf(user) + 1
+            val cup = if (session.settings.domesticCup) domesticCup() else null
             val europe = if (session.settings.europeanNights && position <= EUROPEAN_PLACES) europeanNights(position) else null
-            return result(Verdict.LeagueFinish(position, user.points), standings, europe)
+            return result(Verdict.LeagueFinish(position, user.points), standings, europe, cup)
+        }
+
+        /** A top-flight side's FA Cup: in at the third round, drawn after the league so the league plays out the same. */
+        private fun domesticCup(): CupRun {
+            val cupMatches = mutableListOf<MatchResult>()
+            val used = mutableSetOf<String>()
+            for (round in FA_CUP_ROUNDS.dropWhile { it.stage.type != StageType.THIRD_ROUND }) {
+                val (opponent, venue) = cupTie(round, used)
+                if (!knockout(round.stage, opponent, venue, into = cupMatches)) {
+                    return CupRun(Competition.FA_CUP, cupMatches, Verdict.Eliminated(round.stage, opponent))
+                }
+            }
+            return CupRun(Competition.FA_CUP, cupMatches, Verdict.Champions)
         }
 
         /** Top four go to the Champions League, fifth to the Europa League, sixth and seventh to the Conference League. */
-        private fun europeanNights(position: Int): EuropeanRun {
+        private fun europeanNights(position: Int): CupRun {
             val competition = when {
                 position <= 4 -> Competition.CHAMPIONS_LEAGUE
                 position == 5 -> Competition.EUROPA_LEAGUE
@@ -178,11 +192,11 @@ class SeasonSimulator(
             val format = when (competition) {
                 Competition.CHAMPIONS_LEAGUE -> CHAMPIONS_LEAGUE
                 Competition.EUROPA_LEAGUE -> EUROPA_LEAGUE
-                Competition.CONFERENCE_LEAGUE -> CONFERENCE_LEAGUE
+                else -> CONFERENCE_LEAGUE
             }
             val europeMatches = mutableListOf<MatchResult>()
             val verdict = campaign(format, europeMatches, windowAfterLeaguePhase = false)
-            return EuropeanRun(competition, europeMatches, verdict)
+            return CupRun(competition, europeMatches, verdict)
         }
 
         /** League phase, two-legged knockout ties, one final. */
@@ -248,16 +262,22 @@ class SeasonSimulator(
             for (round in FA_CUP_ROUNDS) {
                 // The third round, where the big clubs enter, is played in January.
                 if (round.stage.type == StageType.THIRD_ROUND) januaryCheckpoint()
-                val name = round.clubs.filter { it !in used }.random(random).also { used += it }
-                val opponent = Opponent(name, round.rating + random.nextInt(-2, 3))
-                val venue = when {
-                    round.stage.type == StageType.SEMI_FINAL || round.stage.type == StageType.FINAL -> Venue.NEUTRAL
-                    random.nextBoolean() -> Venue.HOME
-                    else -> Venue.AWAY
-                }
+                val (opponent, venue) = cupTie(round, used)
                 if (!knockout(round.stage, opponent, venue)) return result(Verdict.Eliminated(round.stage, opponent))
             }
             return result(Verdict.Champions)
+        }
+
+        /** Draws a round's opponent and venue: semi-finals and the final are at Wembley. */
+        private fun cupTie(round: FaCupRound, used: MutableSet<String>): Pair<Opponent, Venue> {
+            val name = round.clubs.filter { it !in used }.random(random).also { used += it }
+            val opponent = Opponent(name, round.rating + random.nextInt(-2, 3))
+            val venue = when {
+                round.stage.type == StageType.SEMI_FINAL || round.stage.type == StageType.FINAL -> Venue.NEUTRAL
+                random.nextBoolean() -> Venue.HOME
+                else -> Venue.AWAY
+            }
+            return opponent to venue
         }
 
         /** Stops the run for the user's choice, or applies the choice they already made. */
@@ -442,7 +462,12 @@ class SeasonSimulator(
             return count
         }
 
-        private fun result(verdict: Verdict, table: List<TableRow> = emptyList(), europe: EuropeanRun? = null): RunResult {
+        private fun result(
+            verdict: Verdict,
+            table: List<TableRow> = emptyList(),
+            europe: CupRun? = null,
+            cup: CupRun? = null,
+        ): RunResult {
             val topScorers = goals.entries
                 .sortedByDescending { it.value }
                 .take(TOP_SCORERS)
@@ -456,6 +481,7 @@ class SeasonSimulator(
                 manager = session.manager,
                 january = januaryOutcome,
                 europe = europe,
+                cup = cup,
             )
         }
     }

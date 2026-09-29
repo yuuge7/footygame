@@ -121,6 +121,12 @@ fun DraftScreen(
     onAppointManager: (managerId: String) -> Unit,
     onPlay: () -> Unit,
     onLeave: () -> Unit,
+    /** Replaces the challenge mark in the top bar, for career drafts and signings. */
+    title: String? = null,
+    /** Replaces the mode's play action once the XI is complete. */
+    playLabel: String? = null,
+    /** False when leaving loses nothing worth a warning, like backing out of a signing. */
+    confirmLeave: Boolean = true,
 ) {
     var showLeaveDialog by rememberSaveable { mutableStateOf(false) }
     // The squad the sheet was opened for. It outlives the spin, so the sheet can slide away after a pick.
@@ -156,10 +162,19 @@ fun DraftScreen(
     }
 
     val onSlotClick = { slot: Slot -> if (session.awaitingSlotChoice) onChooseSlot(slot.id) else openSheet(slot.id) }
-    val requestLeave = { if (session.picks.isEmpty()) onLeave() else showLeaveDialog = true }
-    BackHandler(enabled = session.picks.isNotEmpty()) { showLeaveDialog = true }
+    val warnOnLeave = confirmLeave && session.picks.isNotEmpty()
+    val requestLeave = { if (warnOnLeave) showLeaveDialog = true else onLeave() }
+    BackHandler(enabled = warnOnLeave) { showLeaveDialog = true }
 
-    val spinPanel = @Composable { modifier: Modifier ->
+    Column(
+        Modifier
+            .fillMaxSize()
+            .nightBackdrop()
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
+            .navigationBarsPadding(),
+    ) {
+        DraftTopBar(session, title, requestLeave)
+        RatingsRow(ratings, visible = session.ratingsVisible)
         SpinPanel(
             session = session,
             reel = reel,
@@ -168,61 +183,22 @@ fun DraftScreen(
             onPickPlayer = { openSheet(null) },
             onAppointManager = onAppointManager,
             onPlay = onPlay,
-            modifier = modifier,
+            playLabel = playLabel,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+        )
+        PitchArea(
+            session, spinning, lastPickedId, onSlotClick,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 12.dp),
         )
     }
 
-    BoxWithConstraints(
-        Modifier
-            .fillMaxSize()
-            .nightBackdrop()
-            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
-    ) {
-        // Landscape: a full-height pitch beside the controls, so shirts stay readable.
-        if (maxWidth > maxHeight && maxWidth >= 600.dp) {
-            val controlsWidth = maxWidth * 0.42f
-            Row(Modifier.fillMaxSize()) {
-                Column(
-                    Modifier
-                        .width(controlsWidth)
-                        .fillMaxHeight()
-                        .verticalScroll(rememberScrollState())
-                        .navigationBarsPadding(),
-                ) {
-                    DraftTopBar(session, requestLeave)
-                    RatingsRow(ratings, visible = session.ratingsVisible)
-                    spinPanel(Modifier.padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 12.dp))
-                }
-                PitchArea(
-                    session, spinning, lastPickedId, onSlotClick,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .navigationBarsPadding()
-                        .padding(start = 8.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
-                )
-            }
-        } else {
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .navigationBarsPadding(),
-            ) {
-                DraftTopBar(session, requestLeave)
-                RatingsRow(ratings, visible = session.ratingsVisible)
-                spinPanel(Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
-                PitchArea(
-                    session, spinning, lastPickedId, onSlotClick,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 12.dp),
-                )
-            }
-        }
+    // Summer signings can land outside the mode's pool (a European squad), so fall back to every squad.
+    val sheetSquad = sheetSquadId?.let { id ->
+        session.spin?.takeIf { it.id == id } ?: pool.firstOrNull { it.id == id } ?: ClubSeasons.squad(id)
     }
-
-    val sheetSquad = sheetSquadId?.let { id -> pool.firstOrNull { it.id == id } }
     if (sheetSquad != null) {
         SquadSheet(
             session = session,
@@ -256,9 +232,9 @@ fun DraftScreen(
     }
 }
 
-/** Back, the challenge in its colours, then how far the draft has got and the shape it's filling. */
+/** Back, the challenge in its colours (or a career's [title]), then how far the draft has got and its shape. */
 @Composable
-private fun DraftTopBar(session: DraftSession, onBack: () -> Unit) {
+private fun DraftTopBar(session: DraftSession, title: String?, onBack: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -267,7 +243,11 @@ private fun DraftTopBar(session: DraftSession, onBack: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         SquareIconButton(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.cd_back), onBack)
-        ChallengeMark(session.mode.challenge, MaterialTheme.typography.headlineLarge)
+        if (title != null) {
+            Text(title, style = MaterialTheme.typography.headlineMedium, color = Chalk, maxLines = 1)
+        } else {
+            ChallengeMark(session.mode.challenge, MaterialTheme.typography.headlineLarge)
+        }
         Spacer(Modifier.weight(1f))
         Column(horizontalAlignment = Alignment.End) {
             Text(
@@ -407,6 +387,7 @@ private fun SpinPanel(
     onPickPlayer: () -> Unit,
     onAppointManager: (String) -> Unit,
     onPlay: () -> Unit,
+    playLabel: String?,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -430,7 +411,7 @@ private fun SpinPanel(
                     )
                 }
                 Spacer(Modifier.height(12.dp))
-                PrimaryButton(stringResource(session.mode.playActionRes), onPlay, Modifier.testTag("play"))
+                PrimaryButton(playLabel ?: stringResource(session.mode.playActionRes), onPlay, Modifier.testTag("play"))
             }
 
             session.awaitingSlotChoice -> {
