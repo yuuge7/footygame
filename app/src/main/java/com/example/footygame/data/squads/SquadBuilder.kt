@@ -9,6 +9,7 @@ import java.text.Normalizer
 private val surnameParticles = setOf("de", "van", "der", "di", "da", "dos", "del", "mac", "le")
 private val combiningMarks = "\\p{M}".toRegex()
 private val nonAlphanumeric = "[^a-z0-9]+".toRegex()
+private val plainName = "[A-Za-z0-9 ]+".toRegex()
 
 /** A club's or nation's identity: badge code and kit colours. */
 internal class Kit(val name: String, val code: String, val primary: Long, val secondary: Long)
@@ -25,14 +26,18 @@ internal fun squad(kit: Kit, startYear: Int, pool: Pool, vararg players: Player)
     players = players.toList(),
 )
 
-internal fun gk(name: String, rating: Int, short: String? = null) = player(name, Position.GK, rating, short)
-internal fun def(name: String, rating: Int, short: String? = null) = player(name, Position.DEF, rating, short)
-internal fun mid(name: String, rating: Int, short: String? = null) = player(name, Position.MID, rating, short)
-internal fun att(name: String, rating: Int, short: String? = null) = player(name, Position.ATT, rating, short)
+/**
+ * [key] overrides the id only for namesakes: two different people who share a name (e.g. both players
+ * called Fred) need distinct keys, otherwise the game treats them as one person.
+ */
+internal fun gk(name: String, rating: Int, short: String? = null, key: String? = null) = player(name, Position.GK, rating, short, key)
+internal fun def(name: String, rating: Int, short: String? = null, key: String? = null) = player(name, Position.DEF, rating, short, key)
+internal fun mid(name: String, rating: Int, short: String? = null, key: String? = null) = player(name, Position.MID, rating, short, key)
+internal fun att(name: String, rating: Int, short: String? = null, key: String? = null) = player(name, Position.ATT, rating, short, key)
 
 /** The id comes from the full name, so the same spelling in two squads is the same person. */
-private fun player(name: String, position: Position, rating: Int, short: String?) =
-    Player(slug(name), name, short ?: shortNameOf(name), position, rating)
+private fun player(name: String, position: Position, rating: Int, short: String?, key: String?) =
+    Player(key ?: slug(name), name, short ?: shortNameOf(name), position, rating)
 
 internal fun shortNameOf(name: String): String {
     val parts = name.split(' ')
@@ -41,13 +46,19 @@ internal fun shortNameOf(name: String): String {
     return if (particle != null) parts.drop(particle).joinToString(" ") else parts.last()
 }
 
-internal fun slug(name: String): String =
-    Normalizer.normalize(name, Normalizer.Form.NFD)
+/** Thousands of players are built on first use, so plain ASCII names skip Unicode normalisation. */
+internal fun slug(name: String): String {
+    if (plainName.matches(name)) return name.lowercase().replace(nonAlphanumeric, "-").trim('-')
+    return Normalizer.normalize(name, Normalizer.Form.NFD)
         .replace(combiningMarks, "")
         .lowercase()
         .replace("ł", "l")
         .replace("ı", "i")
         .replace("ð", "d")
         .replace("ø", "o")
+        .replace("æ", "ae")
+        .replace("ß", "ss")
+        .replace("þ", "th")
         .replace(nonAlphanumeric, "-")
         .trim('-')
+}

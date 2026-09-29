@@ -4,7 +4,7 @@
     <!-- Menu -->
     <string name="menu_title_top">Footy</string>
     <string name="menu_title_bottom">Draft</string>
-    <string name="menu_tagline">Spin legendary squads. Draft an XI. Win every match.</string>
+    <string name="menu_tagline">Spin squads from champions to strugglers. Draft an XI. Win every match.</string>
     <string name="menu_choose">Choose a challenge</string>
     <string name="menu_how_to_play">How to play</string>
     <string name="record_none">No runs yet</string>
@@ -23,13 +23,13 @@
     <string name="mode_ucl_title">Champions League</string>
     <string name="mode_ucl_description">League phase, two-legged knockouts, one final.</string>
     <string name="mode_wc_title">World Cup</string>
-    <string name="mode_wc_description">Legendary nations only. Groups, knockouts, the final.</string>
+    <string name="mode_wc_description">Every nation from 1982 to 2022. Groups, knockouts, the final.</string>
     <string name="mode_fac_title">FA Cup</string>
     <string name="mode_fac_description">Start in the extra preliminary round. Finish at Wembley.</string>
 
     <string name="how_to_play_title">How to play</string>
     <string name="how_to_play_step_1">Choose a challenge, then set your formation, difficulty, era and extras.</string>
-    <string name="how_to_play_step_2">Squad first: each spin lands on a legendary squad and you draft one player. Position first: pick a slot, then spin for it.</string>
+    <string name="how_to_play_step_2">Squad first: each spin lands on a real squad from the past and you draft one player. Position first: pick a slot, then spin for it.</string>
     <string name="how_to_play_step_3">Stuck with a squad? Easy gives you 3 re-spins, Normal 1, Hard none.</string>
     <string name="how_to_play_step_4">Players from the same club or nation add chemistry, which lifts your whole team.</string>
     <string name="how_to_play_step_5">Appoint a gaffer, survive the January window and win every match for a perfect run.</string>
@@ -244,6 +244,43 @@
     <string name="summary_top_scorers">Top scorers</string>
     <string name="summary_table">Final table</string>
     <string name="summary_fixtures">Every result</string>
+    <string name="summary_highlights">Highlights</string>
+    <string name="highlight_biggest_win">Biggest win</string>
+    <string name="highlight_heaviest_defeat">Heaviest defeat</string>
+    <string name="highlight_win_streak">Longest winning run</string>
+    <string name="highlight_unbeaten">Longest unbeaten run</string>
+    <string name="highlight_failed_to_score">Failed to score</string>
+    <string name="highlight_score_against">%1$d-%2$d v %3$s</string>
+    <plurals name="highlight_matches">
+        <item quantity="one">%d match</item>
+        <item quantity="other">%d matches</item>
+    </plurals>
+
+    <string name="stats_title">Stats</string>
+    <string name="stats_eyebrow">Record book</string>
+    <string name="stats_filter_all">All</string>
+    <string name="stats_empty">No finished runs here yet. Play one through and every result lands in the record book.</string>
+    <string name="stats_since_update">Runs from before this update only count towards the best records on the menu.</string>
+    <string name="stats_runs">Runs</string>
+    <string name="stats_trophies">Trophies</string>
+    <string name="stats_perfect">Perfect runs</string>
+    <string name="stats_win_rate">Win rate</string>
+    <string name="stats_percent">%1$d%%</string>
+    <string name="stats_record">Record</string>
+    <string name="stats_played">Played</string>
+    <string name="stats_goals_per_game">Goals a game</string>
+    <string name="stats_one_decimal">%1$.1f</string>
+    <string name="stats_bests">Bests</string>
+    <string name="stats_most_drafted">Most drafted</string>
+    <string name="stats_favourite_squads">Favourite squads</string>
+    <string name="stats_formations">Formations</string>
+    <string name="stats_recent">Recent runs</string>
+    <string name="stats_finish_position">Finished %1$s</string>
+    <string name="cd_stats_goals">%1$s, %2$d goals</string>
+    <string name="cd_stats_drafted">%1$s, drafted %2$d times</string>
+    <string name="cd_stats_squad">%1$s, %2$d players drafted</string>
+    <string name="cd_stats_formation">%1$s, used %2$d times</string>
+    <string name="cd_stats_win_rate">Won %1$d%% of %2$d matches</string>
     <string name="table_position">#</string>
     <string name="table_team">Team</string>
     <string name="table_played">P</string>

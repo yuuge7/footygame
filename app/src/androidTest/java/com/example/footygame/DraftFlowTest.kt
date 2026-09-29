@@ -70,6 +70,32 @@ class DraftFlowTest {
     }
 
     @Test
+    fun aFinishedRunLandsInTheStats() {
+        openSetup(DraftMode.WC)
+        tapSetting("style_SQUAD_FIRST")
+        startDraft()
+        repeat(11) { draftSquadFirst() }
+        appointGafferIfAsked()
+
+        rule.onNodeWithTag("play").performClick()
+        waitFor(hasTestTag("skip"))
+        rule.onNodeWithTag("skip").performClick()
+        waitFor(hasTestTag("menu"))
+        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasTestTag("highlights"))
+        rule.onNodeWithTag("highlights").assertIsDisplayed()
+        rule.onNodeWithTag("menu").performClick()
+
+        waitFor(hasTestTag("mode_WC"))
+        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasTestTag("open_stats"))
+        rule.onNodeWithTag("open_stats").performClick()
+        waitFor(hasTestTag("stats_filter_WC"))
+        rule.onNodeWithTag("stats_filter_WC").performClick()
+        rule.onNodeWithTag("stats_overview").assertIsDisplayed()
+        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasTestTag("stats_recent"))
+        rule.onNodeWithTag("stats_recent").assertIsDisplayed()
+    }
+
+    @Test
     fun positionFirstPremierLeagueWithTheJanuaryWindow() {
         openSetup(DraftMode.EPL)
         tapSetting("formation_4-4-2")

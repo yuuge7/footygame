@@ -110,4 +110,7 @@ dependencies {
   implementation(libs.androidx.navigation3.ui)
   implementation(libs.androidx.navigation3.runtime)
   implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+
+  // Career stats are stored as JSON
+  implementation(libs.kotlinx.serialization.json)
 }

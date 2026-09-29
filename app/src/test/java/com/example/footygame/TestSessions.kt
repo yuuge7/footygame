@@ -4,6 +4,8 @@ import com.example.footygame.data.ClubSeasons
 import com.example.footygame.data.ModeRecord
 import com.example.footygame.data.RecordsStore
 import com.example.footygame.data.SettingsStore
+import com.example.footygame.data.StatsStore
+import com.example.footygame.models.CareerStats
 import com.example.footygame.models.DraftMode
 import com.example.footygame.models.DraftPick
 import com.example.footygame.models.DraftSession
@@ -44,5 +46,13 @@ class InMemorySettingsStore : SettingsStore {
     override fun load(mode: DraftMode): DraftSettings = saved[mode] ?: DraftSettings()
     override fun save(mode: DraftMode, settings: DraftSettings) {
         saved[mode] = settings
+    }
+}
+
+class InMemoryStatsStore : StatsStore {
+    var saved = CareerStats()
+    override fun load(): CareerStats = saved
+    override fun save(stats: CareerStats) {
+        saved = stats
     }
 }

@@ -59,6 +59,7 @@ import com.example.footygame.theme.Floodlight
 import com.example.footygame.theme.FoilGold
 import com.example.footygame.theme.Ink
 import com.example.footygame.ui.components.Eyebrow
+import com.example.footygame.ui.components.SecondaryButton
 import com.example.footygame.ui.components.foilFrame
 import com.example.footygame.ui.components.mownStripes
 
@@ -66,6 +67,7 @@ import com.example.footygame.ui.components.mownStripes
 fun MainMenuScreen(
     records: Map<DraftMode, ModeRecord>,
     onModeSelected: (DraftMode) -> Unit,
+    onOpenStats: () -> Unit,
 ) {
     var showHowToPlay by rememberSaveable { mutableStateOf(false) }
     // Play the entrance once per visit to the app, not every time the user comes back to the menu.
@@ -119,6 +121,15 @@ fun MainMenuScreen(
             ) {
                 ModeCard(mode = mode, record = records[mode] ?: ModeRecord(), onClick = { onModeSelected(mode) })
             }
+        }
+        item(key = "stats") {
+            SecondaryButton(
+                stringResource(R.string.stats_title),
+                onOpenStats,
+                Modifier
+                    .padding(top = 4.dp)
+                    .testTag("open_stats"),
+            )
         }
     }
 

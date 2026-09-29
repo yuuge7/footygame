@@ -37,6 +37,15 @@ fun ScreenHeader(
     title: String,
     onBack: () -> Unit,
     trailing: @Composable RowScope.() -> Unit = {},
+) = ScreenHeader("${mode.challenge} · ${stringResource(mode.titleRes)}", title, onBack, trailing)
+
+/** Same header for screens that belong to no single challenge. */
+@Composable
+fun ScreenHeader(
+    eyebrow: String,
+    title: String,
+    onBack: () -> Unit,
+    trailing: @Composable RowScope.() -> Unit = {},
 ) {
     Row(
         Modifier
@@ -48,7 +57,7 @@ fun ScreenHeader(
             Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.cd_back), tint = Chalk)
         }
         Column(Modifier.weight(1f)) {
-            Eyebrow("${mode.challenge} · ${stringResource(mode.titleRes)}")
+            Eyebrow(eyebrow)
             Text(title.uppercase(), style = MaterialTheme.typography.headlineSmall, color = Chalk)
         }
         trailing()

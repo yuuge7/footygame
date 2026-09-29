@@ -34,8 +34,14 @@ class ClubSeasonsTest {
         ClubSeasons.all.forEach { squad ->
             assertEquals("${squad.id} has a duplicate player", squad.players.size, squad.players.map { it.id }.toSet().size)
             assertEquals(3, squad.code.length)
-            squad.players.forEach { assertTrue("${it.name} rating", it.rating in 60..99) }
+            squad.players.forEach { assertTrue("${it.name} rating", it.rating in 55..99) }
         }
+    }
+
+    @Test
+    fun eachCodeBelongsToOneClub() {
+        val clubsByCode = ClubSeasons.all.groupBy({ it.code }, { it.club })
+        clubsByCode.forEach { (code, clubs) -> assertEquals("code $code", 1, clubs.toSet().size) }
     }
 
     @Test
@@ -45,13 +51,21 @@ class ClubSeasonsTest {
     }
 
     @Test
+    fun namesakesKeepSeparateIds() {
+        val freds = ClubSeasons.all.flatMap { it.players }.filter { it.name == "Fred" }.map { it.id }.toSet()
+        assertEquals(setOf("fred", "fred-1983"), freds)
+    }
+
+    @Test
     fun poolsAreBigAndMatchTheirModes() {
-        assertTrue(ClubSeasons.poolFor(DraftMode.EPL).size >= 60)
-        assertTrue(ClubSeasons.poolFor(DraftMode.UCL).size >= 90)
-        assertTrue(ClubSeasons.poolFor(DraftMode.WC).size >= 25)
+        assertTrue(ClubSeasons.poolFor(DraftMode.EPL).size >= 250)
+        assertTrue(ClubSeasons.poolFor(DraftMode.UCL).size >= 190)
+        assertTrue(ClubSeasons.poolFor(DraftMode.WC).size >= 300)
         assertTrue(ClubSeasons.poolFor(DraftMode.WC).all { it.pool == Pool.NATIONAL_TEAM })
-        assertTrue(ClubSeasons.poolFor(DraftMode.EPL).all { it.pool == Pool.ENGLISH_CLUB })
-        assertTrue(ClubSeasons.poolFor(DraftMode.UCL).none { it.pool == Pool.NATIONAL_TEAM })
+        val english = setOf(Pool.ENGLISH_CLUB, Pool.ENGLISH_DOMESTIC)
+        assertTrue(ClubSeasons.poolFor(DraftMode.EPL).all { it.pool in english })
+        assertEquals(ClubSeasons.poolFor(DraftMode.EPL), ClubSeasons.poolFor(DraftMode.FAC))
+        assertTrue(ClubSeasons.poolFor(DraftMode.UCL).none { it.pool == Pool.NATIONAL_TEAM || it.pool == Pool.ENGLISH_DOMESTIC })
     }
 
     @Test
@@ -120,5 +134,8 @@ class ClubSeasonsTest {
         assertEquals("lukasz-piszczek", slug("Łukasz Piszczek"))
         assertEquals("n-golo-kante", slug("N'Golo Kanté"))
         assertEquals("ilkay-gundogan", slug("İlkay Gündoğan"))
+        assertEquals("ole-gunnar-solskjaer", slug("Ole Gunnar Solskjær"))
+        assertEquals("hermann-hreidarsson", slug("Hermann Hreiðarsson"))
+        assertEquals("gary-neville", slug("Gary Neville"))
     }
 }

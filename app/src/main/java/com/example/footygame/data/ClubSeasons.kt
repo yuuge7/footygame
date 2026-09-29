@@ -1,9 +1,30 @@
 package com.example.footygame.data
 
+import com.example.footygame.data.squads.EnglishClubs1992
+import com.example.footygame.data.squads.EnglishClubs1999
+import com.example.footygame.data.squads.EnglishClubs2006
+import com.example.footygame.data.squads.EnglishClubs2012
+import com.example.footygame.data.squads.EnglishClubs2018
 import com.example.footygame.data.squads.EnglishSeasonsEarly
 import com.example.footygame.data.squads.EnglishSeasonsLate
+import com.example.footygame.data.squads.EuropeanCentral
+import com.example.footygame.data.squads.EuropeanEast
+import com.example.footygame.data.squads.EuropeanIberia
+import com.example.footygame.data.squads.EuropeanItalyFrance
+import com.example.footygame.data.squads.EuropeanNorth
 import com.example.footygame.data.squads.EuropeanSeasons
 import com.example.footygame.data.squads.NationalTeams
+import com.example.footygame.data.squads.WorldCup1982
+import com.example.footygame.data.squads.WorldCup1986
+import com.example.footygame.data.squads.WorldCup1990
+import com.example.footygame.data.squads.WorldCup1994
+import com.example.footygame.data.squads.WorldCup1998
+import com.example.footygame.data.squads.WorldCup2002
+import com.example.footygame.data.squads.WorldCup2006
+import com.example.footygame.data.squads.WorldCup2010
+import com.example.footygame.data.squads.WorldCup2014
+import com.example.footygame.data.squads.WorldCup2018
+import com.example.footygame.data.squads.WorldCup2022
 import com.example.footygame.models.ClubSeason
 import com.example.footygame.models.DraftMode
 import com.example.footygame.models.DraftSettings
@@ -16,8 +37,15 @@ object ClubSeasons {
     /** Smallest era that still guarantees a draft can fill every formation. */
     const val MIN_SQUADS = 6
 
-    val all: List<ClubSeason> =
-        EnglishSeasonsEarly.all + EnglishSeasonsLate.all + EuropeanSeasons.all + NationalTeams.all
+    val all: List<ClubSeason> = listOf(
+        EnglishSeasonsEarly.all, EnglishSeasonsLate.all,
+        EnglishClubs1992.all, EnglishClubs1999.all, EnglishClubs2006.all, EnglishClubs2012.all, EnglishClubs2018.all,
+        EuropeanSeasons.all, EuropeanIberia.all, EuropeanItalyFrance.all, EuropeanCentral.all, EuropeanEast.all,
+        EuropeanNorth.all,
+        NationalTeams.all,
+        WorldCup1982.all, WorldCup1986.all, WorldCup1990.all, WorldCup1994.all, WorldCup1998.all, WorldCup2002.all,
+        WorldCup2006.all, WorldCup2010.all, WorldCup2014.all, WorldCup2018.all, WorldCup2022.all,
+    ).flatten()
 
     /** Every squad with each player at the best rating they have anywhere in the game. */
     private val primeSquads: Map<String, ClubSeason> by lazy {

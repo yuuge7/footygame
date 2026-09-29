@@ -14,6 +14,7 @@ import com.example.footygame.ui.DraftScreen
 import com.example.footygame.ui.MainMenuScreen
 import com.example.footygame.ui.SetupScreen
 import com.example.footygame.ui.SimulationScreen
+import com.example.footygame.ui.StatsScreen
 import com.example.footygame.ui.components.rememberReducedMotion
 import com.example.footygame.viewmodel.GameViewModel
 import kotlinx.serialization.Serializable
@@ -29,6 +30,9 @@ data object DraftScreenKey : NavKey
 
 @Serializable
 data object SimulationScreenKey : NavKey
+
+@Serializable
+data object StatsScreenKey : NavKey
 
 @Composable
 fun MainNavigation(viewModel: GameViewModel = viewModel(factory = GameViewModel.Factory)) {
@@ -51,6 +55,15 @@ fun MainNavigation(viewModel: GameViewModel = viewModel(factory = GameViewModel.
                             backStack.add(SetupScreenKey)
                         }
                     },
+                    onOpenStats = { if (backStack.isAt(MainMenuKey)) backStack.add(StatsScreenKey) },
+                )
+            }
+
+            entry<StatsScreenKey> {
+                StatsScreen(
+                    stats = state.stats,
+                    records = state.records,
+                    onBack = { if (backStack.isAt(StatsScreenKey)) backStack.removeAt(backStack.lastIndex) },
                 )
             }
 

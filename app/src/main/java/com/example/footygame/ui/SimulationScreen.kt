@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -53,6 +54,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.example.footygame.R
+import com.example.footygame.game.RunHighlights
 import com.example.footygame.models.DraftSession
 import com.example.footygame.models.EuropeanRun
 import com.example.footygame.models.JanuaryEvent
@@ -145,6 +147,7 @@ fun SimulationScreen(
                 item(key = "scoreboard") { Scoreboard(shown, run.mode.matches, Modifier.padding(bottom = 16.dp)) }
                 item(key = "verdict") { VerdictCard(result, run.isNewBest) }
                 item(key = "summary") { SummaryStats(result) }
+                item(key = "highlights") { Highlights(result) }
                 result.europe?.let { europe -> item(key = "europe") { EuropeCard(europe) } }
                 if (result.table.isNotEmpty()) item(key = "table") { TablePreview(result.table) }
                 if (result.topScorers.isNotEmpty()) item(key = "scorers") { TopScorers(result) }
@@ -438,6 +441,44 @@ private fun SummaryStats(result: RunResult) {
         (result.verdict as? Verdict.LeagueFinish)?.let {
             StatBlock(it.points.toString(), stringResource(R.string.summary_points), valueColor = Floodlight)
         }
+    }
+}
+
+/** Stand-out numbers of the main competition; European nights have their own card. */
+@Composable
+private fun Highlights(result: RunResult) {
+    val highlights = remember(result) { RunHighlights.of(result.matches) }
+    Column(
+        Modifier
+            .padding(top = 24.dp)
+            .testTag("highlights"),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Eyebrow(stringResource(R.string.summary_highlights), modifier = Modifier.padding(bottom = 2.dp))
+        highlights.biggestWin?.let {
+            LabelledValue(
+                stringResource(R.string.highlight_biggest_win),
+                stringResource(R.string.highlight_score_against, it.goalsFor, it.goalsAgainst, it.opponent.name),
+            )
+        }
+        highlights.heaviestDefeat?.let {
+            LabelledValue(
+                stringResource(R.string.highlight_heaviest_defeat),
+                stringResource(R.string.highlight_score_against, it.goalsFor, it.goalsAgainst, it.opponent.name),
+            )
+        }
+        LabelledValue(
+            stringResource(R.string.highlight_win_streak),
+            pluralStringResource(R.plurals.highlight_matches, highlights.longestWinStreak, highlights.longestWinStreak),
+        )
+        LabelledValue(
+            stringResource(R.string.highlight_unbeaten),
+            pluralStringResource(R.plurals.highlight_matches, highlights.longestUnbeatenRun, highlights.longestUnbeatenRun),
+        )
+        LabelledValue(
+            stringResource(R.string.highlight_failed_to_score),
+            pluralStringResource(R.plurals.highlight_matches, highlights.failedToScore, highlights.failedToScore),
+        )
     }
 }
 

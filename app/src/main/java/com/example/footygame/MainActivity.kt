@@ -6,11 +6,16 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import com.example.footygame.data.ClubSeasons
 import com.example.footygame.theme.FootyGameTheme
+import kotlin.concurrent.thread
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+
+    // Several thousand squad players are built on first use; build them off the main thread before the first mode tap.
+    thread(name = "squad-prewarm") { ClubSeasons.all }
 
     // The whole game sits on a dark pitch, so system bar icons stay light regardless of system theme.
     enableEdgeToEdge(

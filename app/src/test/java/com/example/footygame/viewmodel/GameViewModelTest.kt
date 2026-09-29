@@ -2,6 +2,7 @@ package com.example.footygame.viewmodel
 
 import com.example.footygame.InMemoryRecordsStore
 import com.example.footygame.InMemorySettingsStore
+import com.example.footygame.InMemoryStatsStore
 import com.example.footygame.game.DraftEngine
 import com.example.footygame.game.SeasonSimulator
 import com.example.footygame.models.Difficulty
@@ -32,6 +33,7 @@ class GameViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val records = InMemoryRecordsStore()
     private val settings = InMemorySettingsStore()
+    private val stats = InMemoryStatsStore()
     private lateinit var viewModel: GameViewModel
 
     private val quick = DraftSettings(managers = false, januaryWindow = false, europeanNights = false)
@@ -39,7 +41,7 @@ class GameViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
-        viewModel = GameViewModel(records, settings, DraftEngine(Random(21)), SeasonSimulator(), Random(21))
+        viewModel = GameViewModel(records, settings, stats, DraftEngine(Random(21)), SeasonSimulator(), Random(21))
     }
 
     @After
@@ -105,6 +107,13 @@ class GameViewModelTest {
         assertFalse(run.isNewBest)
         assertEquals(1, records.saved.getValue(DraftMode.EPL).runs)
         assertEquals(1, viewModel.uiState.value.records.getValue(DraftMode.EPL).runs)
+
+        val totals = stats.saved.totals(DraftMode.EPL)
+        assertEquals(1, totals.runs)
+        assertEquals(38, totals.played)
+        assertEquals(11, totals.picks.values.sumOf { it.count })
+        assertEquals(run.result!!.goalsFor, totals.scorers.values.sumOf { it.count })
+        assertEquals(stats.saved, viewModel.uiState.value.stats)
     }
 
     @Test
@@ -181,6 +190,7 @@ class GameViewModelTest {
         viewModel.simulate(animate = false)
         assertNull(viewModel.uiState.value.run)
         assertTrue(records.saved.isEmpty())
+        assertEquals(0, stats.saved.recent.size)
     }
 
     private fun startDraft(mode: DraftMode, chosen: DraftSettings) {

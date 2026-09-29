@@ -11,7 +11,14 @@ data class Player(
     val rating: Int,
 )
 
-enum class Pool { ENGLISH_CLUB, EUROPEAN_CLUB, NATIONAL_TEAM }
+enum class Pool {
+    ENGLISH_CLUB,
+
+    /** Premier League squads from the whole table, relegated sides included: too weak for the Champions League draw. */
+    ENGLISH_DOMESTIC,
+    EUROPEAN_CLUB,
+    NATIONAL_TEAM,
+}
 
 data class ClubSeason(
     val id: String,
@@ -32,10 +39,10 @@ fun seasonLabel(startYear: Int, isTournament: Boolean): String =
     if (isTournament) startYear.toString() else "$startYear/${((startYear + 1) % 100).toString().padStart(2, '0')}"
 
 enum class DraftMode(val matches: Int, val pools: Set<Pool>) {
-    EPL(38, setOf(Pool.ENGLISH_CLUB)),
+    EPL(38, setOf(Pool.ENGLISH_CLUB, Pool.ENGLISH_DOMESTIC)),
     UCL(17, setOf(Pool.ENGLISH_CLUB, Pool.EUROPEAN_CLUB)),
     WC(8, setOf(Pool.NATIONAL_TEAM)),
-    FAC(14, setOf(Pool.ENGLISH_CLUB));
+    FAC(14, setOf(Pool.ENGLISH_CLUB, Pool.ENGLISH_DOMESTIC));
 
     val challenge: String get() = "$matches-0"
 

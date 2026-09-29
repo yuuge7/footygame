@@ -10,7 +10,8 @@ internal object NationalTeams {
     val all = listOf(
         nation(Kits.BRAZIL, 1994,
             gk("Cláudio Taffarel", 84, "Taffarel"),
-            def("Jorginho", 84), def("Aldair", 86), def("Márcio Santos", 81), def("Branco", 80), def("Leonardo", 84),
+            def("Jorginho", 84, key = "jorginho-1964"), def("Aldair", 86), def("Márcio Santos", 81), def("Branco", 80),
+            def("Leonardo", 84),
             mid("Mauro Silva", 84), mid("Dunga", 86), mid("Mazinho", 81), mid("Zinho", 82), mid("Raí", 84),
             att("Bebeto", 88), att("Romário", 94),
         ),

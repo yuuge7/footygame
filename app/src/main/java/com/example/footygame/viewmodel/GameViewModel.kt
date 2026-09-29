@@ -10,9 +10,13 @@ import com.example.footygame.data.RecordsStore
 import com.example.footygame.data.SettingsStore
 import com.example.footygame.data.SharedPreferencesRecordsStore
 import com.example.footygame.data.SharedPreferencesSettingsStore
+import com.example.footygame.data.SharedPreferencesStatsStore
+import com.example.footygame.data.StatsStore
 import com.example.footygame.game.DraftEngine
 import com.example.footygame.game.SeasonSimulator
 import com.example.footygame.game.Simulation
+import com.example.footygame.game.withRun
+import com.example.footygame.models.CareerStats
 import com.example.footygame.models.DraftMode
 import com.example.footygame.models.DraftSession
 import com.example.footygame.models.DraftSettings
@@ -48,6 +52,7 @@ data class RunState(
 
 data class GameUiState(
     val records: Map<DraftMode, ModeRecord> = emptyMap(),
+    val stats: CareerStats = CareerStats(),
     val setup: SetupState? = null,
     val draft: DraftSession? = null,
     val run: RunState? = null,
@@ -56,12 +61,13 @@ data class GameUiState(
 class GameViewModel(
     private val recordsStore: RecordsStore,
     private val settingsStore: SettingsStore,
+    private val statsStore: StatsStore,
     private val draftEngine: DraftEngine,
     private val simulator: SeasonSimulator,
     private val seeds: Random = Random.Default,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(GameUiState(records = recordsStore.load()))
+    private val _uiState = MutableStateFlow(GameUiState(records = recordsStore.load(), stats = statsStore.load()))
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
     private var revealJob: Job? = null
@@ -136,14 +142,18 @@ class GameViewModel(
         if (animateReveal) startReveal()
     }
 
-    /** Saves the record as soon as the run is decided, whatever the reveal is doing. */
+    /** Saves the record and the career stats as soon as the run is decided, whatever the reveal is doing. */
     private fun finish(result: RunResult, run: RunState) {
-        val previous = _uiState.value.records[result.mode] ?: ModeRecord()
+        val state = _uiState.value
+        val previous = state.records[result.mode] ?: ModeRecord()
         val updated = previous + result
         recordsStore.save(result.mode, updated)
+        val stats = state.draft?.let { state.stats.withRun(result, it) } ?: state.stats
+        statsStore.save(stats)
         _uiState.update {
             it.copy(
                 records = it.records + (result.mode to updated),
+                stats = stats,
                 run = run.copy(
                     matches = result.matches,
                     result = result,
@@ -191,6 +201,7 @@ class GameViewModel(
                 GameViewModel(
                     SharedPreferencesRecordsStore(application),
                     SharedPreferencesSettingsStore(application),
+                    SharedPreferencesStatsStore(application),
                     DraftEngine(),
                     SeasonSimulator(),
                 )
