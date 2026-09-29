@@ -3,6 +3,7 @@ package com.example.footygame.game
 import com.example.footygame.data.ClubSeasons
 import com.example.footygame.models.DraftPick
 import com.example.footygame.models.Formation
+import com.example.footygame.models.League
 import com.example.footygame.models.Position
 import com.example.footygame.models.ProPhase
 import com.example.footygame.models.ProState
@@ -29,7 +30,7 @@ class ProCareerTest {
             assertTrue(state.potential in 80..94)
             assertEquals(ProPhase.FIRST_CLUB, state.phase)
             assertEquals(3, state.offers.size)
-            val strengths = ProCareer.clubsIn(state.year).map { DraftEngine.strength(it) }.sorted()
+            val strengths = ProCareer.clubsIn(League.PREMIER_LEAGUE, state.year).map { DraftEngine.strength(it) }.sorted()
             val median = strengths[strengths.size / 2]
             state.offers.forEach { assertTrue("${it.club} ${it.strength}", it.strength <= median + 1) }
         }
@@ -84,7 +85,7 @@ class ProCareerTest {
             if (state.phase == ProPhase.TRANSFERS) {
                 assertTrue(state.offers.size <= 3)
                 assertTrue(state.offers.none { it.club == state.club })
-                state = ProCareer.nextSeason(state, state.offers.firstOrNull()?.club ?: state.club)
+                state = ProCareer.nextSeason(state, state.offers.firstOrNull())
             }
         }
         assertEquals(ProPhase.RETIRED, state.phase)

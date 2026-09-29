@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.example.footygame.R
 import com.example.footygame.data.ClubSeasons
 import com.example.footygame.game.ProCareer
+import com.example.footygame.models.League
 import com.example.footygame.models.Legacy
 import com.example.footygame.models.LegacyKind
 import com.example.footygame.models.Offer
@@ -94,12 +95,13 @@ val Position.singularRes: Int
 @Composable
 fun ProSetupScreen(
     legacies: List<Legacy>,
-    onStart: (name: String, position: Position, startYear: Int) -> Unit,
+    onStart: (name: String, position: Position, startYear: Int, league: League) -> Unit,
     onBack: () -> Unit,
 ) {
     var name by rememberSaveable { mutableStateOf("") }
     var position by rememberSaveable { mutableStateOf(Position.ATT) }
     var era by rememberSaveable { mutableStateOf(StartEra.NOUGHTIES) }
+    var league by rememberSaveable { mutableStateOf(League.PREMIER_LEAGUE) }
 
     CareerSetupFrame(
         kicker = stringResource(R.string.pro_kicker),
@@ -108,7 +110,7 @@ fun ProSetupScreen(
         onBack = onBack,
         startLabel = stringResource(R.string.pro_start),
         startEnabled = name.isNotBlank(),
-        onStart = { onStart(name, position, era.year) },
+        onStart = { onStart(name, position, era.year, league) },
         startTag = "start_pro",
     ) {
         CareerTextField(name, { name = it }, stringResource(R.string.pro_name_label), Modifier.testTag("player_name"))
@@ -123,6 +125,18 @@ fun ProSetupScreen(
                         modifier = Modifier.weight(1f),
                     )
                 }
+            }
+        }
+        Eyebrow(stringResource(R.string.pro_league))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            League.entries.forEach { option ->
+                ChoiceCard(
+                    title = stringResource(option.titleRes),
+                    detail = stringResource(option.countryRes),
+                    selected = option == league,
+                    onClick = { league = option },
+                    modifier = Modifier.testTag("league_${option.name}"),
+                )
             }
         }
         Eyebrow(stringResource(R.string.pro_era))
@@ -165,7 +179,8 @@ fun ProHubScreen(
         LazyColumn(
             Modifier
                 .weight(1f)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .testTag("career_hub"),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
@@ -258,6 +273,7 @@ private fun PlayerCard(state: ProState, primary: Long?, secondary: Long?) {
             )
             if (state.club.isNotEmpty()) {
                 Text(state.club, style = MaterialTheme.typography.titleSmall, color = Chalk)
+                Text(stringResource(state.league.titleRes), style = MaterialTheme.typography.bodySmall, color = ChalkMuted)
             }
         }
         RatingBadge(state.rating, 48.dp)
@@ -311,10 +327,10 @@ private fun ProStep(
 
             else -> StepCard(
                 kicker = kicker,
-                title = stringResource(phaseTitle(state.seasonPhase)),
+                title = phaseTitle(state.seasonPhase, state.league),
                 body = stringResource(R.string.career_up_next),
             ) {
-                PrimaryButton(stringResource(playLabel(state.seasonPhase)), onResume, Modifier.testTag("resume_season"), enabled = season != null)
+                PrimaryButton(playLabel(state.seasonPhase, state.league), onResume, Modifier.testTag("resume_season"), enabled = season != null)
             }
         }
 
@@ -364,7 +380,7 @@ private fun OfferCard(offer: Offer, onClick: () -> Unit) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(offer.club, style = MaterialTheme.typography.titleMedium, color = Chalk)
             Text(
-                stringResource(R.string.pro_offer_strength, offer.strength),
+                stringResource(R.string.pro_offer_line, stringResource(offer.league.titleRes), offer.strength),
                 style = MaterialTheme.typography.bodySmall,
                 color = ChalkMuted,
             )
@@ -400,7 +416,7 @@ private fun SeasonReport(season: ProSeason) {
         )
         if (season.trophies.isNotEmpty() || season.awards.isNotEmpty()) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                season.trophies.forEach { Pill(stringResource(it.titleRes)) }
+                season.trophies.forEach { Pill(trophyName(it)) }
                 season.awards.forEach { Pill(stringResource(it.titleRes), color = Hot) }
             }
         }
@@ -427,11 +443,11 @@ private fun ProHistoryRow(season: ProSeason) {
             RatingBadge(season.ratingAfter, 30.dp)
         }
         Text(
-            stringResource(R.string.pro_history_line, season.age, season.appearances, season.goals),
+            stringResource(R.string.pro_history_line, stringResource(season.league.titleRes), season.age, season.appearances, season.goals),
             style = MaterialTheme.typography.bodySmall,
             color = ChalkMuted,
         )
-        val honours = season.trophies.map { stringResource(it.titleRes) } + season.awards.map { stringResource(it.titleRes) }
+        val honours = season.trophies.map { trophyName(it) } + season.awards.map { stringResource(it.titleRes) }
         if (honours.isNotEmpty()) {
             Text(honours.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = Floodlight)
         }

@@ -50,6 +50,7 @@ import com.example.footygame.models.DynastyPhase
 import com.example.footygame.models.DynastySeason
 import com.example.footygame.models.DynastyState
 import com.example.footygame.models.Formation
+import com.example.footygame.models.League
 import com.example.footygame.models.Legacy
 import com.example.footygame.models.LegacyKind
 import com.example.footygame.models.ManagerTrait
@@ -208,7 +209,8 @@ fun DynastyHubScreen(
         LazyColumn(
             Modifier
                 .weight(1f)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .testTag("career_hub"),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
@@ -331,10 +333,10 @@ private fun DynastyStep(
 
             else -> StepCard(
                 kicker = kicker,
-                title = stringResource(phaseTitle(state.seasonPhase)),
+                title = phaseTitle(state.seasonPhase),
                 body = stringResource(R.string.career_up_next),
             ) {
-                PrimaryButton(stringResource(playLabel(state.seasonPhase)), onResume, Modifier.testTag("resume_season"), enabled = season != null)
+                PrimaryButton(playLabel(state.seasonPhase), onResume, Modifier.testTag("resume_season"), enabled = season != null)
             }
         }
 
@@ -366,17 +368,23 @@ private fun DynastyStep(
     }
 }
 
-fun playLabel(phase: SeasonPhase): Int = when (phase) {
-    SeasonPhase.CUP -> R.string.cup_play
-    SeasonPhase.EUROPE -> R.string.europe_play
-    else -> R.string.career_back_to_league
+/** The hub button for a season step that's under way. */
+@Composable
+fun playLabel(phase: SeasonPhase, league: League = League.PREMIER_LEAGUE): String = when (phase) {
+    SeasonPhase.CUP -> stringResource(R.string.career_play_competition, stringResource(league.cup.titleRes))
+    SeasonPhase.EUROPE -> stringResource(R.string.europe_play)
+    else -> stringResource(R.string.career_back_to_league)
 }
 
-fun phaseTitle(phase: SeasonPhase): Int = when (phase) {
-    SeasonPhase.CUP -> R.string.mode_fac_title
-    SeasonPhase.EUROPE -> R.string.europe_title
-    else -> R.string.mode_epl_title
-}
+/** The name of a season step: the league, its cup, or European nights. */
+@Composable
+fun phaseTitle(phase: SeasonPhase, league: League = League.PREMIER_LEAGUE): String = stringResource(
+    when (phase) {
+        SeasonPhase.CUP -> league.cup.titleRes
+        SeasonPhase.EUROPE -> R.string.europe_title
+        else -> league.titleRes
+    },
+)
 
 @Composable
 private fun SeasonReview(season: DynastySeason) {
@@ -459,7 +467,7 @@ private fun HistoryRow(season: DynastySeason) {
         if (season.trophies.isNotEmpty()) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 season.trophies.forEach {
-                    Text(stringResource(it.titleRes), style = MaterialTheme.typography.labelMedium, color = Floodlight)
+                    Text(trophyName(it), style = MaterialTheme.typography.labelMedium, color = Floodlight)
                 }
             }
         }

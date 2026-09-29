@@ -22,6 +22,7 @@ import com.example.footygame.models.DynastyPhase
 import com.example.footygame.models.DynastyState
 import com.example.footygame.models.Formation
 import com.example.footygame.models.JanuaryEvent
+import com.example.footygame.models.League
 import com.example.footygame.models.Legacy
 import com.example.footygame.models.ManagerTrait
 import com.example.footygame.models.MatchResult
@@ -219,8 +220,8 @@ class CareerViewModel(
 
     // ---- Player career ----
 
-    fun startPro(name: String, position: Position, startYear: Int) {
-        val state = ProCareer.newCareer(name, position, startYear, seeds.nextLong())
+    fun startPro(name: String, position: Position, startYear: Int, league: League = League.PREMIER_LEAGUE) {
+        val state = ProCareer.newCareer(name, position, startYear, seeds.nextLong(), league)
         savePro(state)
     }
 
@@ -274,7 +275,7 @@ class CareerViewModel(
     fun signPro(offer: Offer?) {
         val state = _uiState.value.pro?.takeIf { it.phase == ProPhase.TRANSFERS } ?: return
         if (offer != null && offer !in state.offers) return
-        savePro(ProCareer.nextSeason(state, offer?.club ?: state.club))
+        savePro(ProCareer.nextSeason(state, offer))
     }
 
     fun endPro() {

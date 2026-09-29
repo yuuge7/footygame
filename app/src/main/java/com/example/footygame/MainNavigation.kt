@@ -329,9 +329,9 @@ fun MainNavigation(
             entry<ProSetupKey> {
                 ProSetupScreen(
                     legacies = career.legacies,
-                    onStart = { name, position, year ->
+                    onStart = { name, position, year, league ->
                         if (backStack.isAt(ProSetupKey)) {
-                            careers.startPro(name, position, year)
+                            careers.startPro(name, position, year, league)
                             backStack.resetTo(MainMenuKey, ProHubKey)
                         }
                     },
@@ -394,6 +394,7 @@ fun MainNavigation(
                         names = names,
                         highlightId = ProCareer.PLAYER_ID,
                         teamName = pro.club,
+                        league = pro.league,
                         onContinue = {
                             if (backStack.isAt(key)) {
                                 val next = careers.advancePro()

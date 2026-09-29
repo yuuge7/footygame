@@ -129,13 +129,24 @@ enum class Competition {
     EUROPA_LEAGUE,
     CONFERENCE_LEAGUE,
 
-    /** Career seasons only: a top-flight side's FA Cup, from the third round. */
-    FA_CUP;
+    // Career seasons only: each league's domestic cup, entered at the stage its top-flight clubs join.
+    FA_CUP,
+    COPA_DEL_REY,
+    COPPA_ITALIA,
+    DFB_POKAL,
+    COUPE_DE_FRANCE,
+    KNVB_CUP,
+    TACA_DE_PORTUGAL,
+    SCOTTISH_CUP,
+    TURKISH_CUP,
+    RUSSIAN_CUP,
+    UKRAINIAN_CUP,
+    GREEK_CUP;
 
-    val isEuropean: Boolean get() = this != FA_CUP
+    val isEuropean: Boolean get() = this == CHAMPIONS_LEAGUE || this == EUROPA_LEAGUE || this == CONFERENCE_LEAGUE
 }
 
-/** A cup campaign beside the league: the European run a top-seven finish earns, or a career side's FA Cup. */
+/** A cup campaign beside the league: the European run a high finish earns, or a career side's domestic cup. */
 data class CupRun(val competition: Competition, val matches: List<MatchResult>, val verdict: Verdict) {
     val won: Boolean get() = verdict == Verdict.Champions
 }
@@ -149,8 +160,9 @@ data class RunResult(
     val manager: Manager? = null,
     val january: JanuaryOutcome? = null,
     val europe: CupRun? = null,
-    /** The FA Cup run of a career season; null in the challenges. */
+    /** The domestic cup run of a career season; null in the challenges. */
     val cup: CupRun? = null,
+    val league: League = League.PREMIER_LEAGUE,
 ) {
     val wins: Int get() = matches.wins
     val draws: Int get() = matches.draws

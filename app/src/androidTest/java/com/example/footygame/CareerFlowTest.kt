@@ -75,19 +75,19 @@ class CareerFlowTest {
         openCard(cardTag)
         val finished = hasTestTag("new_dynasty") or hasTestTag("new_pro")
         rule.waitUntil(TIMEOUT) {
-            exists(hasTestTag(startTag)) || exists(hasTestTag("quit_career")) || exists(hasTestTag("pick_player")) || exists(finished)
+            exists(hasTestTag(startTag)) || exists(hasTestTag("career_hub")) || exists(hasTestTag("pick_player"))
         }
-        if (exists(finished)) {
+        if (exists(hasTestTag("career_hub")) && exists(finished)) {
             // A finished career: its "new" button leads straight to the setup.
-            rule.onNode(hasScrollToIndexAction()).performScrollToNode(finished)
             rule.onNode(finished).performClick()
         } else if (exists(hasTestTag("pick_player"))) {
             // An unfinished first draft: leaving it ends the dynasty.
             Espresso.pressBack()
             rule.onNodeWithText(rule.activity.getString(R.string.draft_leave_confirm)).performClick()
             openCard(cardTag)
-        } else if (exists(hasTestTag("quit_career"))) {
-            rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasTestTag("quit_career"))
+        } else if (exists(hasTestTag("career_hub"))) {
+            // A career in progress: walk away from it (the button sits at the bottom of the hub's list).
+            rule.onNodeWithTag("career_hub").performScrollToNode(hasTestTag("quit_career"))
             rule.onNodeWithTag("quit_career").performClick()
             rule.onNodeWithText(rule.activity.getString(R.string.dynasty_quit_confirm)).performClick()
             openCard(cardTag)

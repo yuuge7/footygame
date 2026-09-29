@@ -2,8 +2,39 @@ package com.example.footygame.models
 
 import kotlinx.serialization.Serializable
 
-/** Silverware a career can win in a season. */
-enum class Trophy { LEAGUE, FA_CUP, CHAMPIONS_LEAGUE, EUROPA_LEAGUE, CONFERENCE_LEAGUE }
+/**
+ * Silverware a career can win in a season. [LEAGUE] is the Premier League title (the name predates the
+ * other leagues and is kept so saved careers still load); each league's title is [League.title].
+ */
+enum class Trophy {
+    LEAGUE,
+    FA_CUP,
+    CHAMPIONS_LEAGUE,
+    EUROPA_LEAGUE,
+    CONFERENCE_LEAGUE,
+    LA_LIGA,
+    SERIE_A,
+    BUNDESLIGA,
+    LIGUE_1,
+    EREDIVISIE,
+    PRIMEIRA_LIGA,
+    SCOTTISH_PREMIERSHIP,
+    SUPER_LIG,
+    RUSSIAN_PREMIER_LEAGUE,
+    UKRAINIAN_PREMIER_LEAGUE,
+    GREEK_SUPER_LEAGUE,
+    COPA_DEL_REY,
+    COPPA_ITALIA,
+    DFB_POKAL,
+    COUPE_DE_FRANCE,
+    KNVB_CUP,
+    TACA_DE_PORTUGAL,
+    SCOTTISH_CUP,
+    TURKISH_CUP,
+    RUSSIAN_CUP,
+    UKRAINIAN_CUP,
+    GREEK_CUP,
+}
 
 val Competition.trophy: Trophy
     get() = when (this) {
@@ -11,12 +42,23 @@ val Competition.trophy: Trophy
         Competition.EUROPA_LEAGUE -> Trophy.EUROPA_LEAGUE
         Competition.CONFERENCE_LEAGUE -> Trophy.CONFERENCE_LEAGUE
         Competition.FA_CUP -> Trophy.FA_CUP
+        Competition.COPA_DEL_REY -> Trophy.COPA_DEL_REY
+        Competition.COPPA_ITALIA -> Trophy.COPPA_ITALIA
+        Competition.DFB_POKAL -> Trophy.DFB_POKAL
+        Competition.COUPE_DE_FRANCE -> Trophy.COUPE_DE_FRANCE
+        Competition.KNVB_CUP -> Trophy.KNVB_CUP
+        Competition.TACA_DE_PORTUGAL -> Trophy.TACA_DE_PORTUGAL
+        Competition.SCOTTISH_CUP -> Trophy.SCOTTISH_CUP
+        Competition.TURKISH_CUP -> Trophy.TURKISH_CUP
+        Competition.RUSSIAN_CUP -> Trophy.RUSSIAN_CUP
+        Competition.UKRAINIAN_CUP -> Trophy.UKRAINIAN_CUP
+        Competition.GREEK_CUP -> Trophy.GREEK_CUP
     }
 
 /** Everything a career season won: the league title plus any cup. */
 val RunResult.seasonTrophies: List<Trophy>
     get() = listOfNotNull(
-        Trophy.LEAGUE.takeIf { (verdict as? Verdict.LeagueFinish)?.position == 1 },
+        league.title.takeIf { (verdict as? Verdict.LeagueFinish)?.position == 1 },
         cup?.takeIf { it.won }?.competition?.trophy,
         europe?.takeIf { it.won }?.competition?.trophy,
     )
@@ -134,6 +176,7 @@ data class ProSeason(
     val age: Int,
     val club: String,
     val squadId: String,
+    val league: League = League.PREMIER_LEAGUE,
     val starter: Boolean,
     val appearances: Int,
     val goals: Int,
@@ -144,9 +187,15 @@ data class ProSeason(
     val awards: List<Award> = emptyList(),
 )
 
-/** A transfer offer: the club's squad for next season and whether the player would start there. */
+/** A transfer offer: the club's squad for next season, its league, and whether the player would start there. */
 @Serializable
-data class Offer(val squadId: String, val club: String, val strength: Int, val starter: Boolean)
+data class Offer(
+    val squadId: String,
+    val club: String,
+    val strength: Int,
+    val starter: Boolean,
+    val league: League = League.PREMIER_LEAGUE,
+)
 
 @Serializable
 data class ProState(
@@ -160,6 +209,8 @@ data class ProState(
     /** The ceiling the player grows towards; never shown. */
     val potential: Int,
     val club: String = "",
+    /** The league the player's club plays in; the league they start in until the first club is chosen. */
+    val league: League = League.PREMIER_LEAGUE,
     val phase: ProPhase = ProPhase.FIRST_CLUB,
     val seasonPhase: SeasonPhase = SeasonPhase.PRESEASON,
     val offers: List<Offer> = emptyList(),
@@ -191,6 +242,7 @@ data class Legacy(
     val peakRating: Int = 0,
     val awards: Int = 0,
     val clubs: List<String> = emptyList(),
+    val leagues: Int = 0,
 ) {
     val trophyCount: Int get() = trophies.values.sum()
 }

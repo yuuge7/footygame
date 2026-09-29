@@ -12,6 +12,7 @@ import com.example.footygame.models.EraPreset
 import com.example.footygame.models.Formation
 import com.example.footygame.models.JanuaryEvent
 import com.example.footygame.models.JanuaryOutcome
+import com.example.footygame.models.League
 import com.example.footygame.models.ManagerTrait
 import com.example.footygame.models.MatchResult
 import com.example.footygame.models.Outcome
@@ -19,6 +20,8 @@ import com.example.footygame.models.Position
 import com.example.footygame.models.RatingMode
 import com.example.footygame.models.Stage
 import com.example.footygame.models.StageType
+import com.example.footygame.models.Trophy
+import com.example.footygame.models.trophy
 import com.example.footygame.models.Venue
 
 @get:StringRes
@@ -172,7 +175,60 @@ val Competition.titleRes: Int
         Competition.EUROPA_LEAGUE -> R.string.competition_europa_league
         Competition.CONFERENCE_LEAGUE -> R.string.competition_conference_league
         Competition.FA_CUP -> R.string.mode_fac_title
+        Competition.COPA_DEL_REY -> R.string.cup_copa_del_rey
+        Competition.COPPA_ITALIA -> R.string.cup_coppa_italia
+        Competition.DFB_POKAL -> R.string.cup_dfb_pokal
+        Competition.COUPE_DE_FRANCE -> R.string.cup_coupe_de_france
+        Competition.KNVB_CUP -> R.string.cup_knvb
+        Competition.TACA_DE_PORTUGAL -> R.string.cup_taca_de_portugal
+        Competition.SCOTTISH_CUP -> R.string.cup_scottish
+        Competition.TURKISH_CUP -> R.string.cup_turkish
+        Competition.RUSSIAN_CUP -> R.string.cup_russian
+        Competition.UKRAINIAN_CUP -> R.string.cup_ukrainian
+        Competition.GREEK_CUP -> R.string.cup_greek
     }
+
+@get:StringRes
+val League.titleRes: Int
+    get() = when (this) {
+        League.PREMIER_LEAGUE -> R.string.mode_epl_title
+        League.LA_LIGA -> R.string.league_la_liga
+        League.SERIE_A -> R.string.league_serie_a
+        League.BUNDESLIGA -> R.string.league_bundesliga
+        League.LIGUE_1 -> R.string.league_ligue_1
+        League.EREDIVISIE -> R.string.league_eredivisie
+        League.PRIMEIRA_LIGA -> R.string.league_primeira_liga
+        League.SCOTTISH_PREMIERSHIP -> R.string.league_scottish_premiership
+        League.SUPER_LIG -> R.string.league_super_lig
+        League.RUSSIAN_PREMIER_LEAGUE -> R.string.league_russian
+        League.UKRAINIAN_PREMIER_LEAGUE -> R.string.league_ukrainian
+        League.GREEK_SUPER_LEAGUE -> R.string.league_greek
+    }
+
+@get:StringRes
+val League.countryRes: Int
+    get() = when (this) {
+        League.PREMIER_LEAGUE -> R.string.country_england
+        League.LA_LIGA -> R.string.country_spain
+        League.SERIE_A -> R.string.country_italy
+        League.BUNDESLIGA -> R.string.country_germany
+        League.LIGUE_1 -> R.string.country_france
+        League.EREDIVISIE -> R.string.country_netherlands
+        League.PRIMEIRA_LIGA -> R.string.country_portugal
+        League.SCOTTISH_PREMIERSHIP -> R.string.country_scotland
+        League.SUPER_LIG -> R.string.country_turkey
+        League.RUSSIAN_PREMIER_LEAGUE -> R.string.country_russia
+        League.UKRAINIAN_PREMIER_LEAGUE -> R.string.country_ukraine
+        League.GREEK_SUPER_LEAGUE -> R.string.country_greece
+    }
+
+/** A trophy's name: "La Liga title" for a league, the competition's name for a cup. */
+@Composable
+fun trophyName(trophy: Trophy): String {
+    val league = League.entries.firstOrNull { it.title == trophy }
+    if (league != null) return stringResource(R.string.trophy_league_title, stringResource(league.titleRes))
+    return stringResource(Competition.entries.first { it.trophy == trophy }.titleRes)
+}
 
 /** One sentence on how the January gamble played out. */
 @Composable

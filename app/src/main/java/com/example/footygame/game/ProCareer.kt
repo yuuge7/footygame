@@ -1,6 +1,7 @@
 package com.example.footygame.game
 
 import com.example.footygame.data.ClubSeasons
+import com.example.footygame.data.Leagues
 import com.example.footygame.models.Award
 import com.example.footygame.models.ClubSeason
 import com.example.footygame.models.DraftMode
@@ -8,6 +9,7 @@ import com.example.footygame.models.DraftPick
 import com.example.footygame.models.DraftSession
 import com.example.footygame.models.DraftSettings
 import com.example.footygame.models.Formation
+import com.example.footygame.models.League
 import com.example.footygame.models.Legacy
 import com.example.footygame.models.LegacyKind
 import com.example.footygame.models.Offer
@@ -20,6 +22,7 @@ import com.example.footygame.models.RunResult
 import com.example.footygame.models.SeasonPhase
 import com.example.footygame.models.Trophy
 import com.example.footygame.models.Verdict
+import com.example.footygame.models.isLeagueTitle
 import com.example.footygame.models.seasonTrophies
 import kotlin.math.abs
 import kotlin.math.pow
@@ -27,8 +30,8 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /**
- * Player career rules: a 17-year-old joins a real Premier League squad, fights for a place in its XI,
- * grows towards a hidden potential and moves clubs each summer until retiring.
+ * Player career rules: a 17-year-old joins a real squad in one of the game's leagues, fights for a place in
+ * its XI, grows towards a hidden potential and moves clubs (and countries) each summer until retiring.
  */
 object ProCareer {
     const val PLAYER_ID = "you"
@@ -40,16 +43,20 @@ object ProCareer {
     private const val MIN_RATING = 60
     private const val ERA_SPREAD = 8
     private const val OFFERS = 3
+    private const val PROSPECT_AGE = 21
 
-    fun settings() = DraftSettings(
+    /** A season at [club] in [league]: the league, its cup, and Europe for a high enough finish. */
+    fun settings(league: League, club: String) = DraftSettings(
         formation = FORMATION,
         managers = false,
         europeanNights = true,
         januaryWindow = false,
         domesticCup = true,
+        league = league,
+        homeClub = club,
     )
 
-    fun newCareer(name: String, position: Position, startYear: Int, seed: Long): ProState {
+    fun newCareer(name: String, position: Position, startYear: Int, seed: Long, league: League = League.PREMIER_LEAGUE): ProState {
         val random = Random(seed)
         val state = ProState(
             name = name.trim(),
@@ -59,20 +66,31 @@ object ProCareer {
             age = START_AGE,
             rating = 60 + random.nextInt(0, 5),
             potential = 80 + random.nextInt(0, 15),
+            league = league,
         )
         return state.copy(offers = firstClubs(state, random))
     }
 
-    /** The English clubs of [year]: each club at its nearest season we have, if that's within [ERA_SPREAD] years. */
-    fun clubsIn(year: Int): List<ClubSeason> {
-        val nearest = ClubSeasons.poolFor(DraftMode.EPL)
+    /** Every club squad a career can join, English and European, by club. */
+    private val squadsByClub: Map<String, List<ClubSeason>> by lazy {
+        (ClubSeasons.poolFor(DraftMode.EPL) + ClubSeasons.poolFor(DraftMode.UCL))
+            .distinctBy { it.id }
+            .filter { Leagues.leagueOf(it.club) != null }
             .groupBy { it.club }
-            .map { (_, seasons) -> seasons.minBy { abs(it.startYear - year) } }
-        return nearest.filter { abs(it.startYear - year) <= ERA_SPREAD }.ifEmpty { nearest }
     }
 
-    fun clubSquad(club: String, year: Int): ClubSeason? =
-        ClubSeasons.poolFor(DraftMode.EPL).filter { it.club == club }.minByOrNull { abs(it.startYear - year) }
+    /**
+     * A league's clubs in [year], each at its nearest season we have. Clubs whose nearest season is more than
+     * [ERA_SPREAD] years away are left out, unless that would leave the league with fewer than [OFFERS].
+     */
+    fun clubsIn(league: League, year: Int): List<ClubSeason> {
+        val nearest = squadsByClub
+            .filterKeys { Leagues.leagueOf(it) == league }
+            .map { (_, seasons) -> seasons.minBy { abs(it.startYear - year) } }
+        return nearest.filter { abs(it.startYear - year) <= ERA_SPREAD }.takeIf { it.size >= OFFERS } ?: nearest
+    }
+
+    fun clubSquad(club: String, year: Int): ClubSeason? = squadsByClub[club]?.minByOrNull { abs(it.startYear - year) }
 
     fun player(state: ProState, rating: Int = state.rating) = Player(
         id = PLAYER_ID,
@@ -92,16 +110,21 @@ object ProCareer {
         lineup(state, squad, rating).values.any { it.player.id == PLAYER_ID }
 
     fun session(state: ProState, squad: ClubSeason) =
-        DraftSession(mode = DraftMode.EPL, settings = settings(), picks = lineup(state, squad))
+        DraftSession(mode = DraftMode.EPL, settings = settings(state.league, squad.club), picks = lineup(state, squad))
 
     fun seasonSeed(state: ProState): Long = Random(state.seed + state.season * 7919L).nextLong()
 
-    private fun offer(state: ProState, squad: ClubSeason) =
-        Offer(squad.id, squad.club, DraftEngine.strength(squad).roundToInt(), starts(state, squad))
+    private fun offer(state: ProState, squad: ClubSeason) = Offer(
+        squadId = squad.id,
+        club = squad.club,
+        strength = DraftEngine.strength(squad).roundToInt(),
+        starter = starts(state, squad),
+        league = Leagues.leagueOf(squad.club) ?: League.PREMIER_LEAGUE,
+    )
 
-    /** A youngster's first move: three of the weaker half of the league. */
+    /** A youngster's first move: three of the weaker half of the chosen league (or all it has). */
     private fun firstClubs(state: ProState, random: Random): List<Offer> {
-        val clubs = clubsIn(state.year).sortedBy { DraftEngine.strength(it) }
+        val clubs = clubsIn(state.league, state.year).sortedBy { DraftEngine.strength(it) }
         return clubs.take((clubs.size / 2).coerceAtLeast(OFFERS)).shuffled(random).take(OFFERS)
             .map { offer(state, it) }
             .sortedByDescending { it.strength }
@@ -109,6 +132,7 @@ object ProCareer {
 
     fun chooseFirstClub(state: ProState, offer: Offer): ProState = state.copy(
         club = offer.club,
+        league = offer.league,
         phase = ProPhase.SEASON,
         seasonPhase = SeasonPhase.PRESEASON,
         offers = emptyList(),
@@ -144,6 +168,7 @@ object ProCareer {
             age = state.age,
             club = squad.club,
             squadId = squad.id,
+            league = state.league,
             starter = starter,
             appearances = appearances,
             goals = goals,
@@ -200,7 +225,7 @@ object ProCareer {
             Award.PLAYER_OF_THE_SEASON.takeIf { state.rating >= 87 && position <= 2 },
             Award.YOUNG_PLAYER.takeIf { state.age <= 21 && state.rating >= 76 },
             Award.BALLON_DOR.takeIf {
-                state.rating >= 91 && (Trophy.LEAGUE in trophies || Trophy.CHAMPIONS_LEAGUE in trophies)
+                state.rating >= 91 && (trophies.any { it.isLeagueTitle } || Trophy.CHAMPIONS_LEAGUE in trophies)
             },
         )
     }
@@ -227,23 +252,29 @@ object ProCareer {
     fun canRetire(state: ProState): Boolean = state.age >= CAN_RETIRE_AGE || mustRetire(state)
 
     /**
-     * Summer offers from clubs next season whose level suits the player: from a little below their rating
-     * up to a little above, so a rising star gets bigger clubs and a fading one smaller.
+     * Summer offers from clubs in any league next season whose level suits the player: from a little below
+     * their rating up to a little above, so a rising star gets bigger clubs and a fading one smaller. Big
+     * clubs also sign promising youngsters to develop, so up to [PROSPECT_AGE] the ceiling is much higher.
      */
     fun transfers(state: ProState): ProState {
         val random = Random(state.seed + state.season * 31L)
         val next = state.copy(season = state.season + 1)
-        val clubs = clubsIn(next.year).filter { it.club != state.club }
-        val fitting = clubs.filter { DraftEngine.strength(it).roundToInt() in (state.rating - 6)..(state.rating + 3) }
+        val clubs = League.entries.flatMap { clubsIn(it, next.year) }.filter { it.club != state.club }
+        val reach = if (state.age <= PROSPECT_AGE) 10 else 3
+        val fitting = clubs.filter { DraftEngine.strength(it).roundToInt() in (state.rating - 6)..(state.rating + reach) }
         val pool = fitting.ifEmpty { clubs.sortedBy { abs(DraftEngine.strength(it) - state.rating) }.take(5) }
-        val offers = pool.shuffled(random).take(OFFERS).map { offer(next, it) }.sortedByDescending { it.strength }
+        // One club per league first, so England's many clubs don't crowd out a move abroad.
+        val byLeague = pool.shuffled(random).groupBy { Leagues.leagueOf(it.club) }.values.shuffled(random)
+        val picked = (byLeague.map { it.first() } + byLeague.flatMap { it.drop(1) }).take(OFFERS)
+        val offers = picked.map { offer(next, it) }.sortedByDescending { it.strength }
         return state.copy(phase = ProPhase.TRANSFERS, offers = offers)
     }
 
-    /** Next season at [club]: the current one to stay, or an offer's. */
-    fun nextSeason(state: ProState, club: String): ProState = state.copy(
+    /** Next season at the [offer]'s club, or at the current one when it's null. */
+    fun nextSeason(state: ProState, offer: Offer?): ProState = state.copy(
         season = state.season + 1,
-        club = club,
+        club = offer?.club ?: state.club,
+        league = offer?.league ?: state.league,
         phase = ProPhase.SEASON,
         seasonPhase = SeasonPhase.PRESEASON,
         offers = emptyList(),
@@ -261,5 +292,6 @@ object ProCareer {
         peakRating = state.history.maxOfOrNull { maxOf(it.ratingBefore, it.ratingAfter) } ?: state.rating,
         awards = state.history.sumOf { it.awards.size },
         clubs = state.history.map { it.club }.distinct(),
+        leagues = state.history.map { it.league }.distinct().size,
     )
 }

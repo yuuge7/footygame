@@ -1,6 +1,7 @@
 package com.example.footygame.game
 
 import com.example.footygame.data.ClubSeasons
+import com.example.footygame.data.Leagues
 import com.example.footygame.data.Opponents
 import com.example.footygame.models.ClubSeason
 import com.example.footygame.models.Competition
@@ -11,6 +12,7 @@ import com.example.footygame.models.DraftSettings
 import com.example.footygame.models.CupRun
 import com.example.footygame.models.JanuaryEvent
 import com.example.footygame.models.JanuaryOutcome
+import com.example.footygame.models.League
 import com.example.footygame.models.Manager
 import com.example.footygame.models.ManagerTrait
 import com.example.footygame.models.MatchResult
@@ -117,6 +119,8 @@ class SeasonSimulator(
         private val januaryChoice: JanuaryEvent?,
     ) {
         private val mode = session.mode
+        private val leagueFormat = session.settings.league
+        private val homeClub = session.settings.homeClub
         private var team = Team(session.picks, session.manager)
         private val matches = mutableListOf<MatchResult>()
         private val goals = mutableMapOf<String, Int>()
@@ -131,7 +135,9 @@ class SeasonSimulator(
         }
 
         private fun league(): RunResult {
-            val opponents = Opponents.premierLeague.shuffled(random).take(mode.matches / 2)
+            val opponents = Leagues.teams(leagueFormat).filter { it.name != homeClub }
+                .shuffled(random)
+                .take(leagueFormat.size - 1)
             val firstHalf = opponents.shuffled(random)
                 .mapIndexed { index, opponent -> opponent to if (index % 2 == 0) Venue.HOME else Venue.AWAY }
             val secondHalf = firstHalf.shuffled(random).map { (opponent, venue) -> opponent to venue.opposite() }
@@ -165,30 +171,56 @@ class SeasonSimulator(
             val user = standings.first { it.isUser }
             val position = standings.indexOf(user) + 1
             val cup = if (session.settings.domesticCup) domesticCup() else null
-            val europe = if (session.settings.europeanNights && position <= EUROPEAN_PLACES) europeanNights(position) else null
+            val place = leagueFormat.europe.getOrNull(position - 1)
+            val europe = if (session.settings.europeanNights && place != null) europeanNights(place) else null
             return result(Verdict.LeagueFinish(position, user.points), standings, europe, cup)
         }
 
-        /** A top-flight side's FA Cup: in at the third round, drawn after the league so the league plays out the same. */
+        /**
+         * A top-flight side's domestic cup, drawn after the league so the league plays out the same. England's
+         * is the FA Cup from the third round; elsewhere, five rounds against the league's own clubs, the
+         * weaker ones early and the best in the final.
+         */
         private fun domesticCup(): CupRun {
             val cupMatches = mutableListOf<MatchResult>()
             val used = mutableSetOf<String>()
-            for (round in FA_CUP_ROUNDS.dropWhile { it.stage.type != StageType.THIRD_ROUND }) {
-                val (opponent, venue) = cupTie(round, used)
-                if (!knockout(round.stage, opponent, venue, into = cupMatches)) {
-                    return CupRun(Competition.FA_CUP, cupMatches, Verdict.Eliminated(round.stage, opponent))
+            val competition = leagueFormat.cup
+            if (leagueFormat == League.PREMIER_LEAGUE) {
+                for (round in FA_CUP_ROUNDS.dropWhile { it.stage.type != StageType.THIRD_ROUND }) {
+                    val (opponent, venue) = cupTie(round, used)
+                    if (!knockout(round.stage, opponent, venue, into = cupMatches)) {
+                        return CupRun(competition, cupMatches, Verdict.Eliminated(round.stage, opponent))
+                    }
+                }
+                return CupRun(competition, cupMatches, Verdict.Champions)
+            }
+            val field = Leagues.teams(leagueFormat).filter { it.name != homeClub }.sortedBy { it.rating }
+            val half = field.size / 2
+            val rounds = listOf(
+                // Early rounds meet rotated sides, a touch below their league level.
+                Triple(StageType.ROUND_OF_32, field.take(half), -4),
+                Triple(StageType.ROUND_OF_16, field.take(half), -2),
+                Triple(StageType.QUARTER_FINAL, field.drop(half / 2).take(half), 0),
+                Triple(StageType.SEMI_FINAL, field.drop(half), 0),
+                Triple(StageType.FINAL, field.takeLast(4), 0),
+            )
+            for ((type, tier, adjust) in rounds) {
+                val drawn = draw(tier, 1, used).single()
+                val opponent = drawn.copy(rating = drawn.rating + adjust)
+                val venue = when {
+                    type == StageType.FINAL -> Venue.NEUTRAL
+                    random.nextBoolean() -> Venue.HOME
+                    else -> Venue.AWAY
+                }
+                if (!knockout(Stage(type), opponent, venue, into = cupMatches)) {
+                    return CupRun(competition, cupMatches, Verdict.Eliminated(Stage(type), opponent))
                 }
             }
-            return CupRun(Competition.FA_CUP, cupMatches, Verdict.Champions)
+            return CupRun(competition, cupMatches, Verdict.Champions)
         }
 
-        /** Top four go to the Champions League, fifth to the Europa League, sixth and seventh to the Conference League. */
-        private fun europeanNights(position: Int): CupRun {
-            val competition = when {
-                position <= 4 -> Competition.CHAMPIONS_LEAGUE
-                position == 5 -> Competition.EUROPA_LEAGUE
-                else -> Competition.CONFERENCE_LEAGUE
-            }
+        /** The European campaign a league place earns: Champions, Europa or Conference League. */
+        private fun europeanNights(competition: Competition): CupRun {
             val format = when (competition) {
                 Competition.CHAMPIONS_LEAGUE -> CHAMPIONS_LEAGUE
                 Competition.EUROPA_LEAGUE -> EUROPA_LEAGUE
@@ -270,7 +302,7 @@ class SeasonSimulator(
 
         /** Draws a round's opponent and venue: semi-finals and the final are at Wembley. */
         private fun cupTie(round: FaCupRound, used: MutableSet<String>): Pair<Opponent, Venue> {
-            val name = round.clubs.filter { it !in used }.random(random).also { used += it }
+            val name = round.clubs.filter { it !in used && it != homeClub }.random(random).also { used += it }
             val opponent = Opponent(name, round.rating + random.nextInt(-2, 3))
             val venue = when {
                 round.stage.type == StageType.SEMI_FINAL || round.stage.type == StageType.FINAL -> Venue.NEUTRAL
@@ -444,7 +476,7 @@ class SeasonSimulator(
         }
 
         private fun draw(tier: List<Opponent>, count: Int, used: MutableSet<String>): List<Opponent> {
-            val available = tier.filter { it.name !in used }.ifEmpty { tier }
+            val available = tier.filter { it.name !in used && it.name != homeClub }.ifEmpty { tier.filter { it.name != homeClub } }
             return available.shuffled(random).take(count).also { picked -> used += picked.map { it.name } }
         }
 
@@ -482,6 +514,7 @@ class SeasonSimulator(
                 january = januaryOutcome,
                 europe = europe,
                 cup = cup,
+                league = leagueFormat,
             )
         }
     }
@@ -508,7 +541,6 @@ class SeasonSimulator(
         private const val EXTRA_TIME_SHARE = 1 / 3.0
         private const val PENALTY_CONVERSION = 0.76
         private const val TOP_SCORERS = 3
-        private const val EUROPEAN_PLACES = 7
 
         private const val TRAIT_BOOST = 2.5
         private const val TACTICIAN_BOOST = 1.5

@@ -36,8 +36,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.footygame.R
 import com.example.footygame.models.Award
+import com.example.footygame.models.Competition
 import com.example.footygame.models.CupFinish
 import com.example.footygame.models.JanuaryEvent
+import com.example.footygame.models.League
 import com.example.footygame.models.Legacy
 import com.example.footygame.models.LegacyKind
 import com.example.footygame.models.SeasonPhase
@@ -81,6 +83,7 @@ fun CareerSeasonScreen(
     leagueDetail: String? = null,
     /** The club in the table's user row, for the player career; the dynasty keeps "Your XI". */
     teamName: String? = null,
+    league: League = League.PREMIER_LEAGUE,
     onChooseJanuary: (JanuaryEvent) -> Unit = {},
 ) {
     val result = season.result
@@ -96,12 +99,12 @@ fun CareerSeasonScreen(
 
     CompetitionScreen(
         eyebrow = eyebrow,
-        title = stringResource(cup?.competition?.titleRes ?: R.string.mode_epl_title),
+        title = stringResource(cup?.competition?.titleRes ?: league.titleRes),
         matches = matches,
         reveal = reveal,
         names = allNames,
         onBack = onBack,
-        total = if (cup == null) LEAGUE_MATCHES else null,
+        total = if (cup == null) league.matches else null,
         highlightId = highlightId,
         january = if (cup == null) result?.january else null,
         paused = cup == null && season.awaitingJanuary,
@@ -111,13 +114,13 @@ fun CareerSeasonScreen(
             if (cup != null) {
                 item(key = "verdict") { CupVerdictCard(cup) }
             } else if (result != null) {
-                item(key = "verdict") { LeagueVerdictCard(result.verdict as? Verdict.LeagueFinish, leagueDetail) }
+                item(key = "verdict") { LeagueVerdictCard(result.verdict as? Verdict.LeagueFinish, leagueDetail, league) }
                 if (result.table.isNotEmpty()) item(key = "table") { TablePreview(result.table, teamName) }
                 if (result.topScorers.isNotEmpty()) item(key = "scorers") { TopScorers(result) }
             }
         },
         actions = {
-            PrimaryButton(continueLabel(next), onContinue, Modifier.testTag("season_continue"))
+            PrimaryButton(continueLabel(next, result?.cup?.competition), onContinue, Modifier.testTag("season_continue"))
         },
     )
 
@@ -126,19 +129,20 @@ fun CareerSeasonScreen(
     }
 }
 
-private const val LEAGUE_MATCHES = 38
+@Composable
+private fun continueLabel(next: SeasonPhase?, cup: Competition?): String = when (next) {
+    SeasonPhase.CUP -> stringResource(R.string.career_next_cup, stringResource(cup?.titleRes ?: R.string.mode_fac_title))
+    SeasonPhase.EUROPE -> stringResource(R.string.career_next_europe)
+    else -> stringResource(R.string.career_next_review)
+}
 
 @Composable
-private fun continueLabel(next: SeasonPhase?): String = stringResource(
-    when (next) {
-        SeasonPhase.CUP -> R.string.career_next_cup
-        SeasonPhase.EUROPE -> R.string.career_next_europe
-        else -> R.string.career_next_review
-    },
-)
-
-@Composable
-fun LeagueVerdictCard(finish: Verdict.LeagueFinish?, detail: String?, modifier: Modifier = Modifier) {
+fun LeagueVerdictCard(
+    finish: Verdict.LeagueFinish?,
+    detail: String?,
+    league: League = League.PREMIER_LEAGUE,
+    modifier: Modifier = Modifier,
+) {
     val champions = finish?.position == 1
     Column(
         modifier
@@ -153,7 +157,7 @@ fun LeagueVerdictCard(finish: Verdict.LeagueFinish?, detail: String?, modifier: 
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Eyebrow(stringResource(R.string.mode_epl_title), color = if (champions) Floodlight else ChalkMuted)
+        Eyebrow(stringResource(league.titleRes), color = if (champions) Floodlight else ChalkMuted)
         if (finish != null) {
             Text(
                 if (champions) {
@@ -227,16 +231,6 @@ fun ConfidenceMeter(confidence: Int, modifier: Modifier = Modifier) {
 }
 
 @get:StringRes
-val Trophy.titleRes: Int
-    get() = when (this) {
-        Trophy.LEAGUE -> R.string.trophy_league
-        Trophy.FA_CUP -> R.string.mode_fac_title
-        Trophy.CHAMPIONS_LEAGUE -> R.string.competition_champions_league
-        Trophy.EUROPA_LEAGUE -> R.string.competition_europa_league
-        Trophy.CONFERENCE_LEAGUE -> R.string.competition_conference_league
-    }
-
-@get:StringRes
 val Award.titleRes: Int
     get() = when (this) {
         Award.GOLDEN_BOOT -> R.string.award_golden_boot
@@ -282,7 +276,7 @@ fun TrophyCabinet(trophies: Map<Trophy, Int>, modifier: Modifier = Modifier) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Trophy.entries.forEach { trophy ->
                     val count = trophies[trophy] ?: return@forEach
-                    Pill("${count}× ${stringResource(trophy.titleRes)}")
+                    Pill("${count}× ${trophyName(trophy)}")
                 }
             }
         }
@@ -304,7 +298,7 @@ fun LegacyCard(legacy: Legacy, modifier: Modifier = Modifier) {
         if (legacy.trophyCount > 0) {
             Text(
                 legacy.trophies.entries.sortedBy { it.key.ordinal }
-                    .map { (trophy, count) -> "$count× ${stringResource(trophy.titleRes)}" }
+                    .map { (trophy, count) -> "$count× ${trophyName(trophy)}" }
                     .joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
                 color = Floodlight,
@@ -325,6 +319,7 @@ fun legacySummary(legacy: Legacy): String {
         }
         LegacyKind.PLAYER -> stringResource(
             R.string.legacy_player_line, seasons, legacy.appearances, legacy.goals, legacy.peakRating, legacy.clubs.size,
+            legacy.leagues.coerceAtLeast(1),
         )
     }
 }

@@ -242,7 +242,7 @@ fun CupCard(run: CupRun, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Eyebrow(
-            stringResource(if (run.competition.isEuropean) R.string.europe_title else R.string.mode_fac_title),
+            if (run.competition.isEuropean) stringResource(R.string.europe_title) else competition,
             color = if (won) Floodlight else ChalkMuted,
         )
         Text(headline, style = MaterialTheme.typography.headlineSmall, color = Chalk)

@@ -46,8 +46,12 @@ data class DraftSettings(
     val managers: Boolean = true,
     val europeanNights: Boolean = true,
     val januaryWindow: Boolean = true,
-    /** Career seasons only: an FA Cup run from the third round alongside the league. */
+    /** Career seasons only: the league's domestic cup alongside the league. */
     val domesticCup: Boolean = false,
+    /** Career seasons only: the top flight the season is played in. */
+    val league: League = League.PREMIER_LEAGUE,
+    /** Career seasons only: the user's club, kept out of its own fixtures and cup draws. */
+    val homeClub: String? = null,
 ) {
     /** Hard difficulty hides ratings whatever the toggle says. */
     val ratingsShown: Boolean get() = showRatings && !difficulty.hidesRatings
