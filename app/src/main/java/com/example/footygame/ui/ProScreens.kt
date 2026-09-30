@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.footygame.R
@@ -163,11 +164,13 @@ fun ProHubScreen(
     onSign: (Offer?) -> Unit,
     onNewCareer: () -> Unit,
     onQuit: () -> Unit,
+    onOpenSeason: (season: Int) -> Unit = {},
 ) {
     var confirmQuit by rememberSaveable { mutableStateOf(false) }
     val squad = remember(state.club, state.year) { if (state.club.isEmpty()) null else ProCareer.clubSquad(state.club, state.year) }
     val lineup = remember(state, squad) { squad?.let { ProCareer.lineup(state, it) } }
     val trophies = remember(state.history) { state.history.flatMap { it.trophies }.groupingBy { it }.eachCount() }
+    val awards = remember(state.history) { state.awardCounts }
 
     Column(
         Modifier
@@ -209,10 +212,10 @@ fun ProHubScreen(
                     StatTile(state.history.sumOf { it.awards.size }.toString(), stringResource(R.string.pro_awards), Modifier.weight(1f))
                 }
             }
-            item(key = "cabinet") { TrophyCabinet(trophies) }
+            item(key = "cabinet") { TrophyCabinet(trophies, awards = awards) }
             if (state.history.isNotEmpty()) {
                 item(key = "history_header") { Eyebrow(stringResource(R.string.career_history)) }
-                items(state.history.reversed(), key = { "season_${it.season}" }) { ProHistoryRow(it) }
+                items(state.history.reversed(), key = { "season_${it.season}" }) { ProHistoryRow(it, onClick = { onOpenSeason(it.season) }) }
             }
             if (state.phase != ProPhase.RETIRED) {
                 item(key = "quit") {
@@ -340,7 +343,13 @@ private fun ProStep(
             body = stringResource(R.string.pro_offers_body),
         ) {
             state.offers.forEach { offer -> OfferCard(offer, onClick = { onSign(offer) }) }
-            SecondaryButton(stringResource(R.string.pro_stay, state.club), { onSign(null) }, Modifier.testTag("stay"))
+            // Staying reads like an offer, so the choice shows where the player would start.
+            val stay = remember(state) { ProCareer.stayOffer(state) }
+            if (stay != null) {
+                OfferCard(stay, onClick = { onSign(null) }, title = stringResource(R.string.pro_stay, state.club), tag = "stay")
+            } else {
+                SecondaryButton(stringResource(R.string.pro_stay, state.club), { onSign(null) }, Modifier.testTag("stay"))
+            }
             if (ProCareer.canRetire(state)) {
                 TextButton(onClick = onRetire, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.pro_retire), color = ChalkMuted)
@@ -362,9 +371,9 @@ private fun ProStep(
 
 private fun seasonYearLabel(year: Int): String = seasonLabel(year, isTournament = false)
 
-/** A club that wants the player: their shirt, how strong they are, and whether he'd start. */
+/** A club that wants the player (or the one they'd stay at): its shirt, how strong it is, and whether they'd start. */
 @Composable
-private fun OfferCard(offer: Offer, onClick: () -> Unit) {
+private fun OfferCard(offer: Offer, onClick: () -> Unit, title: String = offer.club, tag: String = "offer") {
     val squad = remember(offer.squadId) { ClubSeasons.squad(offer.squadId) }
     Row(
         Modifier
@@ -372,13 +381,13 @@ private fun OfferCard(offer: Offer, onClick: () -> Unit) {
             .panel(RoundedCornerShape(14.dp), color = Dugout)
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp)
-            .testTag("offer"),
+            .testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (squad != null) ClubBadge(squad, 44.dp, showCode = false)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(offer.club, style = MaterialTheme.typography.titleMedium, color = Chalk)
+            Text(title, style = MaterialTheme.typography.titleMedium, color = Chalk)
             Text(
                 stringResource(R.string.pro_offer_line, stringResource(offer.league.titleRes), offer.strength),
                 style = MaterialTheme.typography.bodySmall,
@@ -394,10 +403,10 @@ private fun OfferCard(offer: Offer, onClick: () -> Unit) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SeasonReport(season: ProSeason) {
+fun SeasonReport(season: ProSeason) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(bottom = 6.dp)) {
         Text(
-            stringResource(R.string.pro_report_line, season.appearances, season.goals),
+            stringResource(R.string.pro_report_line, appearances(season.appearances), goals(season.goals)),
             style = MaterialTheme.typography.titleMedium,
             color = Chalk,
         )
@@ -424,13 +433,19 @@ private fun SeasonReport(season: ProSeason) {
 }
 
 @Composable
-private fun ProHistoryRow(season: ProSeason) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .panel(RoundedCornerShape(14.dp))
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+private fun ProHistoryRow(season: ProSeason, onClick: () -> Unit) {
+    HistoryRowFrame(
+        season = season.season,
+        onClick = onClick,
+        footer = {
+            val honours = season.trophies.map { trophyName(it) } + season.awards.map { stringResource(it.titleRes) }
+            Text(
+                honours.joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = Floodlight,
+                modifier = Modifier.weight(1f),
+            )
+        },
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -443,13 +458,18 @@ private fun ProHistoryRow(season: ProSeason) {
             RatingBadge(season.ratingAfter, 30.dp)
         }
         Text(
-            stringResource(R.string.pro_history_line, stringResource(season.league.titleRes), season.age, season.appearances, season.goals),
+            stringResource(R.string.pro_history_line, stringResource(season.league.titleRes), season.age, apps(season.appearances), goals(season.goals)),
             style = MaterialTheme.typography.bodySmall,
             color = ChalkMuted,
         )
-        val honours = season.trophies.map { trophyName(it) } + season.awards.map { stringResource(it.titleRes) }
-        if (honours.isNotEmpty()) {
-            Text(honours.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = Floodlight)
-        }
     }
 }
+
+@Composable
+private fun appearances(count: Int) = pluralStringResource(R.plurals.pro_appearances, count, count)
+
+@Composable
+private fun apps(count: Int) = pluralStringResource(R.plurals.pro_apps, count, count)
+
+@Composable
+private fun goals(count: Int) = pluralStringResource(R.plurals.pro_goals, count, count)

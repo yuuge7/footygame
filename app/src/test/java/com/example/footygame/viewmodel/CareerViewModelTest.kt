@@ -1,6 +1,7 @@
 package com.example.footygame.viewmodel
 
 import com.example.footygame.data.CareerStore
+import com.example.footygame.models.CareerModeStats
 import com.example.footygame.game.DraftEngine
 import com.example.footygame.game.Dynasty
 import com.example.footygame.game.ProCareer
@@ -25,6 +26,7 @@ class InMemoryCareerStore : CareerStore {
     var dynasty: DynastyState? = null
     var pro: ProState? = null
     var legacies: List<Legacy> = emptyList()
+    var stats = CareerModeStats()
     override fun loadDynasty() = dynasty
     override fun saveDynasty(state: DynastyState?) {
         dynasty = state
@@ -36,6 +38,10 @@ class InMemoryCareerStore : CareerStore {
     override fun loadLegacies() = legacies
     override fun saveLegacies(legacies: List<Legacy>) {
         this.legacies = legacies
+    }
+    override fun loadStats() = stats
+    override fun saveStats(stats: CareerModeStats) {
+        this.stats = stats
     }
 }
 
@@ -128,6 +134,68 @@ class CareerViewModelTest {
         val restarted = viewModel()
         assertEquals(before, restarted.uiState.value.dynastySeason!!.result)
         assertEquals(store.dynasty, restarted.uiState.value.dynasty)
+    }
+
+    @Test
+    fun aBookedDynastySeasonCountsInTheStatsAndPlaysBack() {
+        val vm = viewModel()
+        vm.startDynasty("Gaffer", ManagerTrait.BIG_GAMES, Formation.F4231)
+        vm.draftXi()
+        vm.confirmDynastyDraft()
+        vm.playDynastySeason()
+        val played = vm.uiState.value.dynastySeason!!.result!!
+        val booked = vm.uiState.value.dynasty!!.history.single()
+
+        assertEquals(11, booked.squad.size)
+        assertEquals(played, vm.replayDynastySeason(booked)!!.result)
+
+        val manager = store.stats.manager
+        assertEquals(1, manager.seasons.runs)
+        assertEquals(played.wins, manager.seasons.won)
+        assertEquals(booked.position, manager.bestFinish)
+        assertEquals(booked.trophies.size, manager.trophies.values.sum())
+        // Goals from every competition, so the leaderboard agrees with the board's review.
+        assertEquals(booked.topScorerGoals, manager.seasons.scorers.values.maxOf { it.count })
+        assertEquals(store.stats, viewModel().uiState.value.stats)
+    }
+
+    @Test
+    fun aBookedPlayerSeasonCountsInTheStatsAndPlaysBack() {
+        val vm = viewModel()
+        vm.startPro("Jamie Test", Position.ATT, 2003)
+        vm.chooseFirstClub(vm.uiState.value.pro!!.offers.first())
+        vm.kickOffPro()
+        val played = vm.uiState.value.proSeason!!.result!!
+        var guard = 0
+        while (vm.uiState.value.pro!!.seasonPhase != SeasonPhase.REVIEW && guard++ < 5) vm.advancePro()
+        val booked = vm.uiState.value.pro!!.history.single()
+
+        // Still the same season after the summer moves the career on.
+        vm.closeProReview()
+        vm.signPro(null)
+        assertEquals(played, vm.replayProSeason(booked)!!.result)
+
+        val player = store.stats.player
+        assertEquals(1, player.seasons)
+        assertEquals(booked.goals, player.goals)
+        assertEquals(booked.appearances, player.appearances)
+        assertEquals(1, player.clubs.getValue(booked.club).count)
+    }
+
+    @Test
+    fun aFinishedCareerCountsOnceInTheStats() {
+        val restarted = viewModel()
+        restarted.startPro("Jamie Test", Position.ATT, 2003)
+        restarted.chooseFirstClub(restarted.uiState.value.pro!!.offers.first())
+        restarted.kickOffPro()
+        var guard = 0
+        while (restarted.uiState.value.pro!!.seasonPhase != SeasonPhase.REVIEW && guard++ < 5) restarted.advancePro()
+        store.pro = restarted.uiState.value.pro!!.copy(age = 37)
+        val veteran = viewModel()
+        veteran.closeProReview()
+        assertEquals(ProPhase.RETIRED, veteran.uiState.value.pro!!.phase)
+        assertEquals(1, store.stats.player.careers)
+        assertEquals(1, store.legacies.size)
     }
 
     @Test

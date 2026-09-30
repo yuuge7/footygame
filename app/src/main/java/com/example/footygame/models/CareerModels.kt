@@ -33,6 +33,26 @@ data class RunSummary(
     val goalsAgainst: Int,
     val perfect: Boolean,
     val finish: Finish,
+    /** What it takes to play the run again, match for match; null for runs saved before it was kept. */
+    val replay: RunReplay? = null,
+)
+
+/** A drafted player as they played: the squad they came from and the rating they had, which may be a prime one. */
+@Serializable
+data class PickRef(val squadId: String, val playerId: String, val rating: Int)
+
+/**
+ * A run is never stored match by match, only what the simulator needs to play it again: the seed, the
+ * settings, the XI, the gaffer and the January gamble.
+ */
+@Serializable
+data class RunReplay(
+    val seed: Long,
+    val settings: DraftSettings = DraftSettings(),
+    /** Slot id to the player in it. */
+    val picks: Map<String, PickRef>,
+    val manager: Manager? = null,
+    val january: JanuaryEvent? = null,
 )
 
 /**

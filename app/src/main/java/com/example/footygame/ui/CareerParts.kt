@@ -3,6 +3,7 @@ package com.example.footygame.ui
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -93,7 +95,7 @@ fun CareerSeasonScreen(
         else -> null
     }
     val matches = cup?.matches ?: season.league
-    val reveal = rememberReveal("${phase.name}_$seed", matches.size, stepMillis = if (phase == SeasonPhase.LEAGUE) 150L else 320L)
+    val reveal = rememberReveal("${phase.name}_$seed", matches.size)
     val next = result?.let { CareerViewModel.nextPhase(phase, it) }
     val allNames = names + listOfNotNull(result?.january?.signed?.player).associate { it.id to it.shortName }
 
@@ -115,8 +117,7 @@ fun CareerSeasonScreen(
                 item(key = "verdict") { CupVerdictCard(cup) }
             } else if (result != null) {
                 item(key = "verdict") { LeagueVerdictCard(result.verdict as? Verdict.LeagueFinish, leagueDetail, league) }
-                if (result.table.isNotEmpty()) item(key = "table") { TablePreview(result.table, teamName) }
-                if (result.topScorers.isNotEmpty()) item(key = "scorers") { TopScorers(result) }
+                seasonStats(result, teamName)
             }
         },
         actions = {
@@ -264,21 +265,62 @@ fun cupFinishText(finish: CupFinish): String {
     }
 }
 
-/** Every trophy won, as gold pills with a count; a quiet line when the cabinet is empty. */
-@OptIn(ExperimentalLayoutApi::class)
+/** Every trophy won as gold pills with a count, then the awards in pink. */
 @Composable
-fun TrophyCabinet(trophies: Map<Trophy, Int>, modifier: Modifier = Modifier) {
+fun TrophyCabinet(trophies: Map<Trophy, Int>, modifier: Modifier = Modifier, awards: Map<Award, Int> = emptyMap()) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Eyebrow(stringResource(R.string.career_trophy_cabinet))
-        if (trophies.isEmpty()) {
-            Text(stringResource(R.string.career_cabinet_empty), style = MaterialTheme.typography.bodyMedium, color = ChalkMuted)
-        } else {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Trophy.entries.forEach { trophy ->
-                    val count = trophies[trophy] ?: return@forEach
-                    Pill("${count}× ${trophyName(trophy)}")
-                }
-            }
+        Honours(trophies, awards)
+    }
+}
+
+/** Trophies as gold pills and awards as pink ones, each with how often it was won; a quiet line when there are none. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun Honours(trophies: Map<Trophy, Int>, awards: Map<Award, Int> = emptyMap(), modifier: Modifier = Modifier) {
+    if (trophies.isEmpty() && awards.isEmpty()) {
+        Text(stringResource(R.string.career_cabinet_empty), modifier, style = MaterialTheme.typography.bodyMedium, color = ChalkMuted)
+        return
+    }
+    FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Trophy.entries.forEach { trophy ->
+            val count = trophies[trophy] ?: return@forEach
+            Pill("${count}× ${trophyName(trophy)}")
+        }
+        Award.entries.forEach { award ->
+            val count = awards[award] ?: return@forEach
+            Pill("${count}× ${stringResource(award.titleRes)}", color = Hot)
+        }
+    }
+}
+
+/** The corner of a row that says it opens the stats behind it. */
+@Composable
+fun OpenStatsHint(modifier: Modifier = Modifier) {
+    Eyebrow("${stringResource(R.string.detail_open)} ›", modifier, color = Floodlight)
+}
+
+/** One season in a career's history, opening the season's stats on a tap. [footer] shares its line with the hint. */
+@Composable
+fun HistoryRowFrame(
+    season: Int,
+    onClick: () -> Unit,
+    footer: @Composable RowScope.() -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .panel(RoundedCornerShape(14.dp))
+            .clickable(onClickLabel = stringResource(R.string.cd_open_season, season), onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+            .testTag("history_season"),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        content()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            footer()
+            OpenStatsHint()
         }
     }
 }
@@ -302,6 +344,16 @@ fun LegacyCard(legacy: Legacy, modifier: Modifier = Modifier) {
                     .joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
                 color = Floodlight,
+            )
+        }
+        // Careers from before awards were broken down only know how many there were.
+        val awards = legacy.awardCounts.entries.sortedBy { it.key.ordinal }.map { (award, count) -> "$count× ${stringResource(award.titleRes)}" }
+        when {
+            awards.isNotEmpty() -> Text(awards.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = Hot)
+            legacy.awards > 0 -> Text(
+                pluralStringResource(R.plurals.legacy_awards, legacy.awards, legacy.awards),
+                style = MaterialTheme.typography.bodySmall,
+                color = Hot,
             )
         }
     }

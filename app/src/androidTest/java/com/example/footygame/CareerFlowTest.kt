@@ -48,6 +48,12 @@ class CareerFlowTest {
         rule.onNodeWithTag("kick_off").performClick()
         playSeasonToReview()
         assertTrue(exists(hasTestTag("close_review")))
+
+        // The booked season opens from the season-by-season list, played back for its stats.
+        rule.onNodeWithTag("career_hub").performScrollToNode(hasTestTag("history_season"))
+        rule.onNodeWithTag("history_season").performClick()
+        waitFor(hasTestTag("result_detail"))
+        rule.onNodeWithTag("result_detail").performScrollToNode(hasTestTag("league_verdict"))
     }
 
     @Test

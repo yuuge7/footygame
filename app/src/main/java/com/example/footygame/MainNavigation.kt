@@ -20,16 +20,20 @@ import com.example.footygame.models.SeasonPhase
 import com.example.footygame.ui.CareerSeasonScreen
 import com.example.footygame.ui.DraftScreen
 import com.example.footygame.ui.DynastyHubScreen
+import com.example.footygame.ui.DynastySeasonDetailScreen
 import com.example.footygame.ui.DynastySetupScreen
 import com.example.footygame.ui.EuropeScreen
 import com.example.footygame.ui.MainMenuScreen
 import com.example.footygame.ui.ProHubScreen
+import com.example.footygame.ui.ProSeasonDetailScreen
 import com.example.footygame.ui.ProSetupScreen
+import com.example.footygame.ui.RunDetailScreen
 import com.example.footygame.ui.SetupScreen
 import com.example.footygame.ui.SimulationScreen
 import com.example.footygame.ui.StatsScreen
 import com.example.footygame.ui.targetLabel
 import com.example.footygame.ui.components.rememberReducedMotion
+import com.example.footygame.viewmodel.AutoPlay
 import com.example.footygame.viewmodel.CareerViewModel
 import com.example.footygame.viewmodel.GameViewModel
 import kotlinx.serialization.Serializable
@@ -52,6 +56,10 @@ data object EuropeScreenKey : NavKey
 @Serializable
 data object StatsScreenKey : NavKey
 
+/** A run from the record book's recent runs, played back; runs are told apart by their seed. */
+@Serializable
+data class RunDetailKey(val seed: Long) : NavKey
+
 @Serializable
 data object DynastySetupKey : NavKey
 
@@ -65,6 +73,10 @@ data object DynastyHubKey : NavKey
 @Serializable
 data class DynastySeasonKey(val phase: SeasonPhase) : NavKey
 
+/** A booked dynasty season, opened from the season-by-season list. */
+@Serializable
+data class DynastyHistoryKey(val season: Int) : NavKey
+
 @Serializable
 data object ProSetupKey : NavKey
 
@@ -74,6 +86,9 @@ data object ProHubKey : NavKey
 @Serializable
 data class ProSeasonKey(val phase: SeasonPhase) : NavKey
 
+@Serializable
+data class ProHistoryKey(val season: Int) : NavKey
+
 @Composable
 fun MainNavigation(
     viewModel: GameViewModel = viewModel(factory = GameViewModel.Factory),
@@ -82,6 +97,7 @@ fun MainNavigation(
     val backStack = rememberNavBackStack(MainMenuKey)
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val career by careers.uiState.collectAsStateWithLifecycle()
+    val autoPlay by AutoPlay.on.collectAsStateWithLifecycle()
     val reducedMotion = rememberReducedMotion()
     val pop = { key: NavKey -> if (backStack.isAt(key)) backStack.removeAt(backStack.lastIndex) }
 
@@ -120,7 +136,29 @@ fun MainNavigation(
             }
 
             entry<StatsScreenKey> {
-                StatsScreen(stats = state.stats, records = state.records, onBack = { pop(StatsScreenKey) })
+                StatsScreen(
+                    stats = state.stats,
+                    records = state.records,
+                    onBack = { pop(StatsScreenKey) },
+                    careerStats = career.stats,
+                    legacies = career.legacies,
+                    managerSeasonsPlayed = career.managerSeasonsPlayed,
+                    playerSeasonsPlayed = career.playerSeasonsPlayed,
+                    onOpenRun = { run ->
+                        val seed = run.replay?.seed
+                        if (seed != null && backStack.isAt(StatsScreenKey)) backStack.add(RunDetailKey(seed))
+                    },
+                )
+            }
+
+            entry<RunDetailKey> { key ->
+                val summary = state.stats.recent.firstOrNull { it.replay?.seed == key.seed }
+                if (summary == null) {
+                    ReturnToMenu(backStack, key)
+                } else {
+                    val replayed = remember(summary) { viewModel.replay(summary) }
+                    RunDetailScreen(summary, replayed, onBack = { pop(key) })
+                }
             }
 
             entry<SetupScreenKey> {
@@ -179,6 +217,9 @@ fun MainNavigation(
                         session = draft,
                         onSkip = viewModel::skipReveal,
                         onChooseJanuary = viewModel::chooseJanuary,
+                        autoPlay = autoPlay,
+                        onNextMatch = viewModel::nextMatch,
+                        onToggleAutoPlay = viewModel::toggleAutoPlay,
                         onPlayEurope = { if (backStack.isAt(SimulationScreenKey)) backStack.add(EuropeScreenKey) },
                         onRunItBack = {
                             if (backStack.isAt(SimulationScreenKey)) viewModel.simulate(animate = !reducedMotion)
@@ -280,6 +321,7 @@ fun MainNavigation(
                             }
                         },
                         onNextSeason = careers::startNextDynastySeason,
+                        onOpenSeason = { season -> if (backStack.isAt(DynastyHubKey)) backStack.add(DynastyHistoryKey(season)) },
                         onNewDynasty = {
                             if (backStack.isAt(DynastyHubKey)) {
                                 careers.endDynasty()
@@ -324,6 +366,17 @@ fun MainNavigation(
                 }
             }
 
+            entry<DynastyHistoryKey> { key ->
+                val dynasty = career.dynasty
+                val booked = dynasty?.history?.firstOrNull { it.season == key.season }
+                if (dynasty == null || booked == null) {
+                    ReturnToMenu(backStack, key)
+                } else {
+                    val replayed = remember(dynasty.seed, booked) { careers.replayDynastySeason(booked) }
+                    DynastySeasonDetailScreen(dynasty, booked, replayed, onBack = { pop(key) })
+                }
+            }
+
             // ---- Player career ----
 
             entry<ProSetupKey> {
@@ -359,6 +412,7 @@ fun MainNavigation(
                         onCloseReview = careers::closeProReview,
                         onRetire = careers::retirePro,
                         onSign = careers::signPro,
+                        onOpenSeason = { season -> if (backStack.isAt(ProHubKey)) backStack.add(ProHistoryKey(season)) },
                         onNewCareer = {
                             if (backStack.isAt(ProHubKey)) {
                                 careers.endPro()
@@ -403,6 +457,17 @@ fun MainNavigation(
                         },
                         onBack = { pop(key) },
                     )
+                }
+            }
+
+            entry<ProHistoryKey> { key ->
+                val pro = career.pro
+                val booked = pro?.history?.firstOrNull { it.season == key.season }
+                if (pro == null || booked == null) {
+                    ReturnToMenu(backStack, key)
+                } else {
+                    val replayed = remember(pro.seed, booked) { careers.replayProSeason(booked) }
+                    ProSeasonDetailScreen(pro, booked, replayed, onBack = { pop(key) })
                 }
             }
         },

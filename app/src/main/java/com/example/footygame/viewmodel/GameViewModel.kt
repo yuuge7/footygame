@@ -13,8 +13,10 @@ import com.example.footygame.data.SharedPreferencesSettingsStore
 import com.example.footygame.data.SharedPreferencesStatsStore
 import com.example.footygame.data.StatsStore
 import com.example.footygame.game.DraftEngine
+import com.example.footygame.game.ReplayedRun
 import com.example.footygame.game.SeasonSimulator
 import com.example.footygame.game.Simulation
+import com.example.footygame.game.replayed
 import com.example.footygame.game.withRun
 import com.example.footygame.models.CareerStats
 import com.example.footygame.models.DraftMode
@@ -23,6 +25,7 @@ import com.example.footygame.models.DraftSettings
 import com.example.footygame.models.JanuaryEvent
 import com.example.footygame.models.MatchResult
 import com.example.footygame.models.RunResult
+import com.example.footygame.models.RunSummary
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,7 +45,7 @@ data class RunState(
     val matches: List<MatchResult>,
     val result: RunResult? = null,
     val januaryOffers: List<JanuaryEvent> = emptyList(),
-    /** How many matches the results screen has revealed so far. */
+    /** How many matches the results screen has revealed so far: one per tap, or on their own with [AutoPlay]. */
     val revealed: Int = 0,
     val isNewBest: Boolean = false,
     /** The European campaign has been played on its own screen, so its result may show on the season's. */
@@ -126,10 +129,27 @@ class GameViewModel(
         _uiState.update { state -> state.copy(run = state.run?.copy(europeSeen = true)) }
     }
 
+    /** Shows every match known so far: up to the transfer window, or to the end. */
     fun skipReveal() {
         cancelReveal()
         _uiState.update { state -> state.copy(run = state.run?.let { it.copy(revealed = it.matches.size) }) }
     }
+
+    /** Reveals one more match: the season played game by game. */
+    fun nextMatch() {
+        _uiState.update { state ->
+            state.copy(run = state.run?.let { if (it.revealed < it.matches.size) it.copy(revealed = it.revealed + 1) else it })
+        }
+    }
+
+    /** Lets the matches come in on their own, one every [AutoPlay.STEP_MS], or stops them. */
+    fun toggleAutoPlay() {
+        AutoPlay.toggle()
+        if (AutoPlay.on.value && animateReveal) startReveal() else cancelReveal()
+    }
+
+    /** Plays a run from the record book again, for its stats. */
+    fun replay(summary: RunSummary): ReplayedRun? = summary.replayed(simulator)
 
     private fun advance(step: Simulation, run: RunState) {
         when (step) {
@@ -145,7 +165,7 @@ class GameViewModel(
 
             is Simulation.Complete -> finish(step.result, run)
         }
-        if (animateReveal) startReveal()
+        if (animateReveal && AutoPlay.on.value) startReveal()
     }
 
     /** Saves the record and the career stats as soon as the run is decided, whatever the reveal is doing. */
@@ -154,7 +174,7 @@ class GameViewModel(
         val previous = state.records[result.mode] ?: ModeRecord()
         val updated = previous + result
         recordsStore.save(result.mode, updated)
-        val stats = state.draft?.let { state.stats.withRun(result, it) } ?: state.stats
+        val stats = state.draft?.let { state.stats.withRun(result, it, run.seed) } ?: state.stats
         statsStore.save(stats)
         _uiState.update {
             it.copy(
@@ -174,14 +194,11 @@ class GameViewModel(
     private fun startReveal() {
         cancelReveal()
         revealJob = viewModelScope.launch {
-            val start = _uiState.value.run ?: return@launch
-            val step = (REVEAL_DURATION_MS / start.mode.matches).coerceIn(MIN_STEP_MS, MAX_STEP_MS)
-            delay(if (start.revealed == 0) REVEAL_START_DELAY_MS else step)
             while (true) {
+                delay(AutoPlay.STEP_MS)
                 val run = _uiState.value.run ?: break
                 if (run.revealed >= run.matches.size) break
-                _uiState.update { state -> state.copy(run = state.run?.let { it.copy(revealed = it.revealed + 1) }) }
-                delay(step)
+                nextMatch()
             }
         }
     }
@@ -196,11 +213,6 @@ class GameViewModel(
     }
 
     companion object {
-        private const val REVEAL_DURATION_MS = 4_500L
-        private const val MIN_STEP_MS = 110L
-        private const val MAX_STEP_MS = 520L
-        private const val REVEAL_START_DELAY_MS = 350L
-
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val application = checkNotNull(this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY])

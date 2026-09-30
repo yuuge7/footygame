@@ -27,6 +27,7 @@ import com.example.footygame.data.squads.WorldCup2018
 import com.example.footygame.data.squads.WorldCup2022
 import com.example.footygame.models.ClubSeason
 import com.example.footygame.models.DraftMode
+import com.example.footygame.models.DraftPick
 import com.example.footygame.models.DraftSettings
 import com.example.footygame.models.EraPreset
 import com.example.footygame.models.EraRange
@@ -61,6 +62,13 @@ object ClubSeasons {
 
     /** A squad by id, for careers that store ids and rebuild squads on load. */
     fun squad(id: String): ClubSeason? = byId[id]
+
+    /** A stored pick rebuilt: the player from that squad at the rating they had. Null once either is gone. */
+    fun pick(squadId: String, playerId: String, rating: Int): DraftPick? {
+        val squad = squad(squadId) ?: return null
+        val player = squad.players.firstOrNull { it.id == playerId } ?: return null
+        return DraftPick(player.copy(rating = rating), squad)
+    }
 
     fun poolFor(mode: DraftMode): List<ClubSeason> = all.filter { it.pool in mode.pools }
 

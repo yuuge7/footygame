@@ -2,6 +2,7 @@ package com.example.footygame.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,10 +53,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.footygame.R
 import com.example.footygame.data.ModeRecord
+import com.example.footygame.models.CareerModeStats
 import com.example.footygame.models.CareerStats
 import com.example.footygame.models.DraftMode
 import com.example.footygame.models.Finish
+import com.example.footygame.models.League
+import com.example.footygame.models.Legacy
+import com.example.footygame.models.LegacyKind
+import com.example.footygame.models.ManagerTotals
 import com.example.footygame.models.ModeTotals
+import com.example.footygame.models.PlayerTotals
 import com.example.footygame.models.RunSummary
 import com.example.footygame.models.StageType
 import com.example.footygame.models.Tally
@@ -79,14 +86,26 @@ import kotlin.math.roundToInt
 /** How many rows each leaderboard shows. */
 private const val LEADERBOARD_ROWS = 5
 
+/** The record book's tabs beside the challenges: "All" (every challenge) and the two career modes. */
+private const val TAB_ALL = "ALL"
+private const val TAB_MANAGER = "MANAGER"
+private const val TAB_PLAYER = "PLAYER"
+
 @Composable
 fun StatsScreen(
     stats: CareerStats,
     records: Map<DraftMode, ModeRecord>,
     onBack: () -> Unit,
+    careerStats: CareerModeStats = CareerModeStats(),
+    legacies: List<Legacy> = emptyList(),
+    /** Career seasons played in each mode, counted or not, to tell when older seasons went uncounted. */
+    managerSeasonsPlayed: Int = 0,
+    playerSeasonsPlayed: Int = 0,
+    onOpenRun: (RunSummary) -> Unit = {},
 ) {
-    // Null means every challenge added together.
-    var mode by rememberSaveable { mutableStateOf<DraftMode?>(null) }
+    // A challenge's name, or one of the tabs above.
+    var tab by rememberSaveable { mutableStateOf(TAB_ALL) }
+    val mode = DraftMode.entries.firstOrNull { it.name == tab }
     val totals = remember(stats, mode) { stats.totals(mode) }
     val recent = remember(stats, mode) { stats.recent.filter { mode == null || it.mode == mode } }
     val recordedRuns = if (mode != null) records[mode]?.runs ?: 0 else records.values.sumOf { it.runs }
@@ -107,33 +126,11 @@ fun StatsScreen(
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item(key = "filters") { ModeFilter(mode, onSelect = { mode = it }) }
-            // Records predate the stats, so older runs show up on the menu but not here.
-            if (recordedRuns > totals.runs) {
-                item(key = "since_update") {
-                    Text(stringResource(R.string.stats_since_update), style = MaterialTheme.typography.bodySmall, color = ChalkMuted)
-                }
-            }
-            if (totals.runs == 0) {
-                item(key = "empty") {
-                    Text(
-                        stringResource(R.string.stats_empty),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = ChalkMuted,
-                        modifier = Modifier
-                            .padding(top = 24.dp)
-                            .testTag("stats_empty"),
-                    )
-                }
-            } else {
-                item(key = "overview") { Overview(totals) }
-                item(key = "record") { RecordCard(totals) }
-                item(key = "bests") { BestsCard(totals) }
-                leaderboard("scorers", R.string.summary_top_scorers, totals.scorers.ranked(), R.string.cd_stats_goals)
-                leaderboard("drafted", R.string.stats_most_drafted, totals.picks.ranked(), R.string.cd_stats_drafted)
-                leaderboard("squads", R.string.stats_favourite_squads, totals.squads.ranked(), R.string.cd_stats_squad)
-                item(key = "formations") { FormationsCard(totals) }
-                if (recent.isNotEmpty()) item(key = "recent") { RecentRuns(recent, showMode = mode == null) }
+            item(key = "filters") { ModeFilter(tab, onSelect = { tab = it }) }
+            when (tab) {
+                TAB_MANAGER -> managerStats(careerStats.manager, legacies.filter { it.kind == LegacyKind.MANAGER }, managerSeasonsPlayed)
+                TAB_PLAYER -> playerStats(careerStats.player, legacies.filter { it.kind == LegacyKind.PLAYER }, playerSeasonsPlayed)
+                else -> challengeStats(totals, recent, recordedRuns, showMode = mode == null, onOpenRun = onOpenRun)
             }
         }
         Spacer(Modifier.navigationBarsPadding())
@@ -142,28 +139,24 @@ fun StatsScreen(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ModeFilter(selected: DraftMode?, onSelect: (DraftMode?) -> Unit) {
+private fun ModeFilter(selected: String, onSelect: (String) -> Unit) {
     val colors = FilterChipDefaults.filterChipColors(
         containerColor = Dugout,
         labelColor = Chalk,
         selectedContainerColor = Hot,
         selectedLabelColor = Chalk,
     )
+    val tabs = listOf(TAB_ALL to stringResource(R.string.stats_filter_all)) +
+        DraftMode.entries.map { it.name to stringResource(it.titleRes) } +
+        listOf(TAB_MANAGER to stringResource(R.string.dynasty_title), TAB_PLAYER to stringResource(R.string.pro_title))
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilterChip(
-            selected = selected == null,
-            onClick = { onSelect(null) },
-            label = { Text(stringResource(R.string.stats_filter_all)) },
-            colors = colors,
-            modifier = Modifier.testTag("stats_filter_ALL"),
-        )
-        DraftMode.entries.forEach { mode ->
+        tabs.forEach { (tab, label) ->
             FilterChip(
-                selected = selected == mode,
-                onClick = { onSelect(mode) },
-                label = { Text(stringResource(mode.titleRes)) },
+                selected = selected == tab,
+                onClick = { onSelect(tab) },
+                label = { Text(label) },
                 colors = colors,
-                modifier = Modifier.testTag("stats_filter_${mode.name}"),
+                modifier = Modifier.testTag("stats_filter_$tab"),
             )
         }
     }
@@ -184,9 +177,10 @@ private fun StatsCard(title: String, modifier: Modifier = Modifier, content: @Co
     }
 }
 
+/** The headline numbers, big; the second one in gold. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Overview(totals: ModeTotals) {
+private fun Overview(vararg values: Pair<String, Int>) {
     FlowRow(
         Modifier
             .fillMaxWidth()
@@ -195,18 +189,22 @@ private fun Overview(totals: ModeTotals) {
         horizontalArrangement = Arrangement.spacedBy(28.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        val big = MaterialTheme.typography.displayMedium
-        StatBlock(totals.runs.toString(), stringResource(R.string.stats_runs), valueStyle = big)
-        StatBlock(totals.trophies.toString(), stringResource(R.string.stats_trophies), valueStyle = big, valueColor = Floodlight)
-        StatBlock(totals.perfectRuns.toString(), stringResource(R.string.stats_perfect), valueStyle = big)
+        values.forEachIndexed { index, (label, value) ->
+            StatBlock(
+                value.toString(),
+                label,
+                valueStyle = MaterialTheme.typography.displayMedium,
+                valueColor = if (index == 1) Floodlight else Chalk,
+            )
+        }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun RecordCard(totals: ModeTotals) {
+private fun RecordCard(totals: ModeTotals, title: String = stringResource(R.string.stats_record)) {
     val winRate = if (totals.played == 0) 0 else (totals.won * 100f / totals.played).roundToInt()
-    StatsCard(stringResource(R.string.stats_record)) {
+    StatsCard(title) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             StatBlock(totals.played.toString(), stringResource(R.string.stats_played))
             StatBlock(totals.won.toString(), stringResource(R.string.run_wins), valueColor = ResultWin)
@@ -282,13 +280,14 @@ private fun LazyListScope.leaderboard(
     }
 }
 
+/** How often each of a few things came up, most first, with bars scaled to the most. */
 @Composable
-private fun FormationsCard(totals: ModeTotals) {
-    val used = totals.formations.entries.sortedWith(compareByDescending<Map.Entry<*, Int>> { it.value })
-    if (used.isEmpty()) return
-    StatsCard(stringResource(R.string.stats_formations)) {
-        used.forEach { (formation, count) ->
-            RankedRow(formation.label, count, used.first().value, stringResource(R.string.cd_stats_formation, formation.label, count))
+private fun CountsCard(title: String, counts: List<Pair<String, Int>>, descriptionRes: Int) {
+    if (counts.isEmpty()) return
+    val ranked = counts.sortedByDescending { it.second }
+    StatsCard(title) {
+        ranked.forEach { (name, count) ->
+            RankedRow(name, count, ranked.first().second, stringResource(descriptionRes, name, count))
         }
     }
 }
@@ -340,12 +339,21 @@ private fun MagnitudeBar(fraction: Float, thickness: Dp) {
     }
 }
 
+/** The last runs, newest first. One that can be played back opens its stats on a tap. */
 @Composable
-private fun RecentRuns(runs: List<RunSummary>, showMode: Boolean) {
+private fun RecentRuns(runs: List<RunSummary>, showMode: Boolean, onOpen: (RunSummary) -> Unit) {
+    val openLabel = stringResource(R.string.cd_open_run)
     StatsCard(stringResource(R.string.stats_recent), Modifier.testTag("stats_recent")) {
         runs.forEachIndexed { index, run ->
             if (index > 0) HorizontalDivider(color = ChalkLine)
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            val opens = run.replay != null
+            Row(
+                Modifier
+                    .clickable(enabled = opens, onClickLabel = openLabel) { onOpen(run) }
+                    .padding(vertical = 4.dp)
+                    .testTag(if (opens) "recent_run" else "recent_run_closed"),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     if (showMode) Eyebrow(stringResource(run.mode.titleRes))
                     Text(
@@ -359,13 +367,163 @@ private fun RecentRuns(runs: List<RunSummary>, showMode: Boolean) {
                     Text("${run.won}-${run.drawn}-${run.lost}", style = MaterialTheme.typography.titleMedium, color = Chalk)
                     Text("${run.goalsFor}:${run.goalsAgainst}", style = MaterialTheme.typography.bodySmall, color = ChalkMuted)
                 }
+                if (opens) {
+                    Spacer(Modifier.width(12.dp))
+                    OpenStatsHint()
+                }
             }
         }
     }
 }
 
+/** One challenge's record book, or every challenge's added together. */
+private fun LazyListScope.challengeStats(
+    totals: ModeTotals,
+    recent: List<RunSummary>,
+    recordedRuns: Int,
+    showMode: Boolean,
+    onOpenRun: (RunSummary) -> Unit,
+) {
+    // Records predate the stats, so older runs show up on the menu but not here.
+    if (recordedRuns > totals.runs) sinceUpdate(R.string.stats_since_update)
+    if (totals.runs == 0) {
+        emptyState(R.string.stats_empty)
+        return
+    }
+    item(key = "overview") {
+        Overview(
+            stringResource(R.string.stats_runs) to totals.runs,
+            stringResource(R.string.stats_trophies) to totals.trophies,
+            stringResource(R.string.stats_perfect) to totals.perfectRuns,
+        )
+    }
+    item(key = "record") { RecordCard(totals) }
+    item(key = "bests") { BestsCard(totals) }
+    leaderboard("scorers", R.string.summary_top_scorers, totals.scorers.ranked(), R.string.cd_stats_goals)
+    leaderboard("drafted", R.string.stats_most_drafted, totals.picks.ranked(), R.string.cd_stats_drafted)
+    leaderboard("squads", R.string.stats_favourite_squads, totals.squads.ranked(), R.string.cd_stats_squad)
+    formations(totals)
+    if (recent.isNotEmpty()) item(key = "recent") { RecentRuns(recent, showMode, onOpenRun) }
+}
+
+/** The manager dynasties' record book: every booked season, then the finished dynasties. */
+private fun LazyListScope.managerStats(manager: ManagerTotals, legacies: List<Legacy>, seasonsPlayed: Int) {
+    val totals = manager.seasons
+    if (seasonsPlayed > totals.runs) sinceUpdate(R.string.stats_career_since_update)
+    if (totals.runs == 0) {
+        emptyState(R.string.stats_manager_empty)
+    } else {
+        item(key = "overview") {
+            Overview(
+                stringResource(R.string.stats_seasons) to totals.runs,
+                stringResource(R.string.stats_trophies) to manager.trophies.values.sum(),
+                stringResource(R.string.stats_dynasties) to manager.dynasties,
+            )
+        }
+        item(key = "record") { RecordCard(totals, stringResource(R.string.stats_league_record)) }
+        item(key = "honours") {
+            StatsCard(stringResource(R.string.stats_honours), Modifier.testTag("stats_honours")) {
+                Honours(manager.trophies)
+                manager.bestFinish?.let { LabelledValue(stringResource(R.string.stats_best_finish), ordinal(it)) }
+                LabelledValue(stringResource(R.string.stats_targets_met), stringResource(R.string.stats_out_of, manager.targetsMet, totals.runs))
+                LabelledValue(stringResource(R.string.stats_perfect_seasons), totals.perfectRuns.toString())
+                LabelledValue(stringResource(R.string.stats_sackings), manager.sackings.toString())
+            }
+        }
+        item(key = "bests") { BestsCard(totals) }
+        leaderboard("scorers", R.string.summary_top_scorers, totals.scorers.ranked(), R.string.cd_stats_goals)
+        leaderboard("mainstays", R.string.stats_most_seasons, totals.picks.ranked(), R.string.cd_stats_seasons)
+        leaderboard("squads", R.string.stats_favourite_squads, totals.squads.ranked(), R.string.cd_stats_squad)
+        formations(totals)
+    }
+    hallOfFame(legacies)
+}
+
+/** The player dynasties' record book: every booked season, then the retired careers. */
+private fun LazyListScope.playerStats(player: PlayerTotals, legacies: List<Legacy>, seasonsPlayed: Int) {
+    if (seasonsPlayed > player.seasons) sinceUpdate(R.string.stats_career_since_update)
+    if (player.seasons == 0) {
+        emptyState(R.string.stats_player_empty)
+    } else {
+        item(key = "overview") {
+            Overview(
+                stringResource(R.string.stats_seasons) to player.seasons,
+                stringResource(R.string.pro_goals) to player.goals,
+                stringResource(R.string.stats_trophies) to player.trophies.values.sum(),
+                stringResource(R.string.pro_awards) to player.awards.values.sum(),
+            )
+        }
+        item(key = "record") { PlayerRecordCard(player) }
+        item(key = "honours") {
+            StatsCard(stringResource(R.string.stats_honours), Modifier.testTag("stats_honours")) {
+                Honours(player.trophies, player.awards)
+            }
+        }
+        leaderboard("clubs", R.string.stats_clubs, player.clubs.ranked(), R.string.cd_stats_seasons)
+        item(key = "leagues") {
+            CountsCard(
+                stringResource(R.string.stats_leagues),
+                League.entries.mapNotNull { league -> player.leagues[league]?.let { stringResource(league.titleRes) to it } },
+                R.string.cd_stats_seasons,
+            )
+        }
+    }
+    hallOfFame(legacies)
+}
+
+private fun LazyListScope.formations(totals: ModeTotals) {
+    item(key = "formations") {
+        CountsCard(
+            stringResource(R.string.stats_formations),
+            totals.formations.entries.map { (formation, count) -> formation.label to count },
+            R.string.cd_stats_formation,
+        )
+    }
+}
+
+private fun LazyListScope.sinceUpdate(textRes: Int) {
+    item(key = "since_update") {
+        Text(stringResource(textRes), style = MaterialTheme.typography.bodySmall, color = ChalkMuted)
+    }
+}
+
+private fun LazyListScope.emptyState(textRes: Int) {
+    item(key = "empty") {
+        Text(
+            stringResource(textRes),
+            style = MaterialTheme.typography.bodyLarge,
+            color = ChalkMuted,
+            modifier = Modifier
+                .padding(top = 24.dp)
+                .testTag("stats_empty"),
+        )
+    }
+}
+
+private fun LazyListScope.hallOfFame(legacies: List<Legacy>) {
+    if (legacies.isEmpty()) return
+    item(key = "hall_of_fame") { HallOfFame(legacies, Modifier.padding(top = 12.dp)) }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun finishText(finish: Finish, perfect: Boolean, mode: DraftMode): String {
+private fun PlayerRecordCard(player: PlayerTotals) {
+    StatsCard(stringResource(R.string.stats_record)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatBlock(player.appearances.toString(), stringResource(R.string.stats_apps))
+            StatBlock(player.goals.toString(), stringResource(R.string.pro_goals), valueColor = Floodlight)
+            val perGame = if (player.appearances == 0) 0f else player.goals.toFloat() / player.appearances
+            StatBlock(stringResource(R.string.stats_one_decimal, perGame), stringResource(R.string.stats_goals_per_game))
+        }
+        LabelledValue(stringResource(R.string.stats_starter_seasons), stringResource(R.string.stats_out_of, player.starterSeasons, player.seasons))
+        LabelledValue(stringResource(R.string.stats_best_season_goals), player.bestSeasonGoals.toString())
+        LabelledValue(stringResource(R.string.stats_peak_rating), player.peakRating.toString())
+        LabelledValue(stringResource(R.string.stats_careers), player.careers.toString())
+    }
+}
+
+@Composable
+internal fun finishText(finish: Finish, perfect: Boolean, mode: DraftMode): String {
     if (perfect) return stringResource(R.string.verdict_perfect, mode.challenge)
     if (finish.trophy) return stringResource(R.string.verdict_champions)
     finish.position?.let { return stringResource(R.string.stats_finish_position, ordinal(it)) }

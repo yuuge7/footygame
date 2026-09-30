@@ -70,6 +70,7 @@ import com.example.footygame.ui.components.PrimaryButton
 import com.example.footygame.ui.components.ScreenHeader
 import com.example.footygame.ui.components.SecondaryButton
 import com.example.footygame.ui.components.SquadPitch
+import com.example.footygame.ui.components.StatTile
 import com.example.footygame.ui.components.nightBackdrop
 import com.example.footygame.ui.components.panel
 import com.example.footygame.viewmodel.SeasonView
@@ -193,6 +194,7 @@ fun DynastyHubScreen(
     onNextSeason: () -> Unit,
     onNewDynasty: () -> Unit,
     onQuit: () -> Unit,
+    onOpenSeason: (season: Int) -> Unit = {},
 ) {
     var confirmQuit by rememberSaveable { mutableStateOf(false) }
     val picks = remember(state.squad) { Dynasty.picks(state.squad) }
@@ -250,10 +252,20 @@ fun DynastyHubScreen(
                         .height(400.dp),
                 )
             }
+            if (state.history.isNotEmpty()) {
+                item(key = "totals") {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        StatTile(state.history.sumOf { it.won }.toString(), stringResource(R.string.run_wins), Modifier.weight(1f), valueColor = ResultWin)
+                        StatTile(state.history.sumOf { it.drawn }.toString(), stringResource(R.string.run_draws), Modifier.weight(1f))
+                        StatTile(state.history.sumOf { it.lost }.toString(), stringResource(R.string.run_losses), Modifier.weight(1f), valueColor = ResultLoss)
+                        StatTile(state.trophyCount.toString(), stringResource(R.string.stats_trophies), Modifier.weight(1f), valueColor = Floodlight)
+                    }
+                }
+            }
             item(key = "cabinet") { TrophyCabinet(trophies) }
             if (state.history.isNotEmpty()) {
                 item(key = "history_header") { Eyebrow(stringResource(R.string.career_history)) }
-                items(state.history.reversed(), key = { "season_${it.season}" }) { HistoryRow(it) }
+                items(state.history.reversed(), key = { "season_${it.season}" }) { HistoryRow(it, onClick = { onOpenSeason(it.season) }) }
             }
             if (state.phase != DynastyPhase.FINISHED) {
                 item(key = "quit") {
@@ -387,7 +399,7 @@ fun phaseTitle(phase: SeasonPhase, league: League = League.PREMIER_LEAGUE): Stri
 )
 
 @Composable
-private fun SeasonReview(season: DynastySeason) {
+fun SeasonReview(season: DynastySeason) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             if (season.position == 1) {
@@ -443,13 +455,17 @@ private fun ChangeRow(change: RatingChange) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun HistoryRow(season: DynastySeason) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .panel(RoundedCornerShape(14.dp))
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+private fun HistoryRow(season: DynastySeason, onClick: () -> Unit) {
+    HistoryRowFrame(
+        season = season.season,
+        onClick = onClick,
+        footer = {
+            FlowRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                season.trophies.forEach {
+                    Text(trophyName(it), style = MaterialTheme.typography.labelMedium, color = Floodlight)
+                }
+            }
+        },
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -463,13 +479,6 @@ private fun HistoryRow(season: DynastySeason) {
                 style = MaterialTheme.typography.titleSmall,
                 color = if (season.position <= season.target) ResultWin else ResultLoss,
             )
-        }
-        if (season.trophies.isNotEmpty()) {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                season.trophies.forEach {
-                    Text(trophyName(it), style = MaterialTheme.typography.labelMedium, color = Floodlight)
-                }
-            }
         }
     }
 }

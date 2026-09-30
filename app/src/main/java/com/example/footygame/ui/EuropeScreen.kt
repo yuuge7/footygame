@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.footygame.R
+import com.example.footygame.game.shortNames
 import com.example.footygame.models.Competition
 import com.example.footygame.models.DraftSession
 import com.example.footygame.theme.Chalk
@@ -32,10 +33,7 @@ fun EuropeScreen(run: RunState, session: DraftSession, onSeen: () -> Unit, onBac
     val result = run.result ?: return
     val europe = result.europe ?: return
     val reveal = rememberReveal("europe_${run.seed}", europe.matches.size)
-    val names = remember(session, result) {
-        (session.picks.values.map { it.player } + listOfNotNull(result.january?.signed?.player))
-            .associate { it.id to it.shortName }
-    }
+    val names = remember(session, result) { session.shortNames(result) }
     LaunchedEffect(reveal.isComplete) { if (reveal.isComplete) onSeen() }
 
     CompetitionScreen(

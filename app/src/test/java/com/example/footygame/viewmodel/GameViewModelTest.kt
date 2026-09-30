@@ -41,6 +41,8 @@ class GameViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
+        // One choice for the whole app, so every test starts with matches waiting for a tap.
+        AutoPlay.set(false)
         viewModel = GameViewModel(records, settings, stats, DraftEngine(Random(21)), SeasonSimulator(), Random(21))
     }
 
@@ -139,15 +141,25 @@ class GameViewModelTest {
     }
 
     @Test
-    fun revealPlaysOutOverTimeAndCanBeSkipped() = runTest(dispatcher) {
+    fun revealGoesMatchByMatchUntilAutoPlayTakesOver() = runTest(dispatcher) {
         startDraft(DraftMode.WC, quick)
         draftEveryone()
         viewModel.simulate(animate = true)
+        advanceUntilIdle()
+        // Nothing moves on its own: each match waits for a tap.
         assertEquals(0, viewModel.uiState.value.run!!.revealed)
+        viewModel.nextMatch()
+        viewModel.nextMatch()
+        assertEquals(2, viewModel.uiState.value.run!!.revealed)
+
+        viewModel.toggleAutoPlay()
+        assertTrue(AutoPlay.on.value)
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value.run!!.isRevealComplete)
 
+        // Auto play stays chosen for the next run, and Skip still jumps to the end.
         viewModel.simulate(animate = true)
+        assertTrue(AutoPlay.on.value)
         assertEquals(0, viewModel.uiState.value.run!!.revealed)
         viewModel.skipReveal()
         assertTrue(viewModel.uiState.value.run!!.isRevealComplete)
@@ -155,10 +167,39 @@ class GameViewModelTest {
     }
 
     @Test
+    fun nextMatchNeverRunsPastWhatIsKnown() {
+        startDraft(DraftMode.WC, quick)
+        draftEveryone()
+        viewModel.simulate(animate = true)
+        val total = viewModel.uiState.value.run!!.matches.size
+        repeat(total + 3) { viewModel.nextMatch() }
+        assertEquals(total, viewModel.uiState.value.run!!.revealed)
+        assertTrue(viewModel.uiState.value.run!!.isRevealComplete)
+    }
+
+    @Test
+    fun aRecentRunPlaysBackMatchForMatch() {
+        startDraft(DraftMode.EPL, quick.copy(januaryWindow = true, europeanNights = true))
+        draftEveryone()
+        viewModel.simulate(animate = false)
+        val paused = viewModel.uiState.value.run!!
+        viewModel.chooseJanuary(paused.januaryOffers.last())
+        val played = viewModel.uiState.value.run!!.result!!
+
+        val summary = viewModel.uiState.value.stats.recent.first()
+        val replay = viewModel.replay(summary)!!
+        assertEquals(played.matches, replay.result.matches)
+        assertEquals(played.table, replay.result.table)
+        assertEquals(played.europe, replay.result.europe)
+        assertEquals(played.january, replay.result.january)
+    }
+
+    @Test
     fun revealStopsAtTheWindowAndCarriesOnAfterTheChoice() = runTest(dispatcher) {
         startDraft(DraftMode.EPL, quick.copy(januaryWindow = true))
         draftEveryone()
         viewModel.simulate(animate = true)
+        viewModel.toggleAutoPlay()
         advanceUntilIdle()
         val paused = viewModel.uiState.value.run!!
         assertTrue(paused.isAwaitingJanuary)

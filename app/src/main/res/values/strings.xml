@@ -380,6 +380,10 @@
         <item quantity="one">%d season</item>
         <item quantity="other">%d seasons</item>
     </plurals>
+    <plurals name="legacy_awards">
+        <item quantity="one">%d award</item>
+        <item quantity="other">%d awards</item>
+    </plurals>
     <string name="legacy_retired">Retired a legend</string>
     <string name="legacy_sacked">Sacked</string>
     <string name="legacy_manager_line">%1$s · %2$d%% won · %3$s</string>
@@ -461,7 +465,19 @@
     <string name="pro_role_starter">You\'re in the starting XI.</string>
     <string name="pro_role_bench">You start on the bench. Grow and you\'ll get your chance.</string>
     <string name="pro_review_title">Your season</string>
-    <string name="pro_report_line">%1$d appearances · %2$d goals</string>
+    <string name="pro_report_line">%1$s · %2$s</string>
+    <plurals name="pro_appearances">
+        <item quantity="one">%d appearance</item>
+        <item quantity="other">%d appearances</item>
+    </plurals>
+    <plurals name="pro_apps">
+        <item quantity="one">%d app</item>
+        <item quantity="other">%d apps</item>
+    </plurals>
+    <plurals name="pro_goals">
+        <item quantity="one">%d goal</item>
+        <item quantity="other">%d goals</item>
+    </plurals>
     <string name="pro_report_finish">%1$s finished %2$s</string>
     <string name="pro_rating_change">Rating %1$d → %2$d</string>
     <string name="pro_open_transfers">Open the transfer window</string>
@@ -481,8 +497,50 @@
     <string name="pro_goals">Goals</string>
     <string name="pro_awards">Awards</string>
     <string name="pro_history_title">Season %1$d · %2$s</string>
-    <string name="pro_history_line">%1$s · age %2$d · %3$d apps · %4$d goals</string>
+    <string name="pro_history_line">%1$s · age %2$d · %3$s · %4$s</string>
     <string name="pro_quit">Walk away from this career</string>
     <string name="pro_quit_title">Walk away?</string>
     <string name="pro_quit_body">The career ends here and won\'t make the hall of fame.</string>
+    <!-- Match by match -->
+    <string name="match_up_first">Up first</string>
+    <string name="match_next">Next: %1$s · %2$s · %3$s</string>
+    <string name="match_kick_off">Kick off</string>
+    <string name="match_next_button">Next match</string>
+    <string name="match_auto">Auto play</string>
+    <string name="match_pause">Pause</string>
+    <string name="table_show_all">Show the full table</string>
+    <string name="table_show_less">Show the top four</string>
+    <string name="results_of">%1$s results</string>
+
+    <!-- A past season or run, opened from the history or the record book -->
+    <string name="detail_open">Stats</string>
+    <string name="cd_open_season">Season %1$d, open its stats</string>
+    <string name="cd_open_run">Open this run\'s stats</string>
+    <string name="detail_season_unavailable">Match-by-match stats aren\'t kept for seasons played before this update.</string>
+    <string name="detail_run_unavailable">This run can\'t be played back any more: the squads have changed since.</string>
+    <string name="detail_season_xi">The XI that season</string>
+    <string name="detail_your_season">Your season</string>
+
+    <!-- Career stats -->
+    <string name="stats_seasons">Seasons</string>
+    <string name="stats_dynasties">Dynasties done</string>
+    <string name="stats_careers">Careers finished</string>
+    <string name="stats_manager_empty">No dynasty seasons yet. Play one through and it lands in the record book.</string>
+    <string name="stats_player_empty">No career seasons yet. Play one through and it lands in the record book.</string>
+    <string name="stats_career_since_update">Seasons played before this update aren\'t counted here.</string>
+    <string name="stats_honours">Honours</string>
+    <string name="stats_best_finish">Best league finish</string>
+    <string name="stats_targets_met">Board targets met</string>
+    <string name="stats_out_of">%1$d of %2$d</string>
+    <string name="stats_sackings">Sackings</string>
+    <string name="stats_perfect_seasons">Perfect seasons</string>
+    <string name="stats_most_seasons">Most seasons in the XI</string>
+    <string name="stats_apps">Appearances</string>
+    <string name="stats_starter_seasons">Seasons as a starter</string>
+    <string name="stats_best_season_goals">Most goals in a season</string>
+    <string name="stats_peak_rating">Peak rating</string>
+    <string name="stats_clubs">Clubs</string>
+    <string name="stats_leagues">Leagues</string>
+    <string name="stats_league_record">League record</string>
+    <string name="cd_stats_seasons">%1$s, %2$d seasons</string>
 </resources>

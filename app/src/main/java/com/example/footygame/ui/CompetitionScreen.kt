@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
@@ -107,7 +106,14 @@ fun CompetitionScreen(
                 }
             }
             if (!complete) {
-                Scoreboard(shown, total, Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                Scoreboard(shown, total, Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp))
+                LatestMatchCard(
+                    shown = shown,
+                    upcoming = matches.getOrNull(shown.size),
+                    names = names,
+                    highlightId = highlightId,
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp),
+                )
             }
             LazyColumn(
                 state = listState,
@@ -130,8 +136,8 @@ fun CompetitionScreen(
                     }
                 }
             }
-            if (complete) {
-                Surface(color = Dugout, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
+            Surface(color = Dugout, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
+                if (complete) {
                     Column(
                         Modifier
                             .fillMaxWidth()
@@ -141,9 +147,15 @@ fun CompetitionScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         content = actions,
                     )
+                } else {
+                    RevealControls(
+                        started = shown.isNotEmpty(),
+                        canPlay = !reveal.isComplete,
+                        autoPlay = reveal.autoPlay,
+                        onNext = reveal::next,
+                        onToggleAutoPlay = reveal::toggleAutoPlay,
+                    )
                 }
-            } else {
-                Spacer(Modifier.navigationBarsPadding())
             }
         }
         if (complete && celebrate) Confetti(seed = confettiSeed, modifier = Modifier.fillMaxSize())

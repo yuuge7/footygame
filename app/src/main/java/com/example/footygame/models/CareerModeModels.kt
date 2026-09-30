@@ -124,6 +124,9 @@ data class DynastySeason(
     val confidenceAfter: Int,
     val topScorer: String? = null,
     val topScorerGoals: Int = 0,
+    /** The XI that played the season and its January gamble, so the season can be replayed for its stats. */
+    val squad: List<SquadMember> = emptyList(),
+    val january: JanuaryEvent? = null,
 )
 
 @Serializable
@@ -220,6 +223,7 @@ data class ProState(
     val goals: Int get() = history.sumOf { it.goals }
     val appearances: Int get() = history.sumOf { it.appearances }
     val trophyCount: Int get() = history.sumOf { it.trophies.size }
+    val awardCounts: Map<Award, Int> get() = history.flatMap { it.awards }.groupingBy { it }.eachCount()
 }
 
 // ---- Hall of fame ----
@@ -243,6 +247,46 @@ data class Legacy(
     val awards: Int = 0,
     val clubs: List<String> = emptyList(),
     val leagues: Int = 0,
+    /** Each award and how often it was won; empty for careers saved before awards were broken down. */
+    val awardCounts: Map<Award, Int> = emptyMap(),
 ) {
     val trophyCount: Int get() = trophies.values.sum()
 }
+
+// ---- Career stats ----
+
+/** Every manager dynasty season ever booked, finished dynasties or not. */
+@Serializable
+data class ManagerTotals(
+    /** Seasons are the runs; matches, goals and scorers are the league's, like a challenge's. */
+    val seasons: ModeTotals = ModeTotals(),
+    val trophies: Map<Trophy, Int> = emptyMap(),
+    val bestFinish: Int? = null,
+    val targetsMet: Int = 0,
+    /** Dynasties that reached the hall of fame, and how many of those ended in the sack. */
+    val dynasties: Int = 0,
+    val sackings: Int = 0,
+)
+
+/** Every player dynasty season ever booked, retired or not. */
+@Serializable
+data class PlayerTotals(
+    val seasons: Int = 0,
+    val starterSeasons: Int = 0,
+    val appearances: Int = 0,
+    val goals: Int = 0,
+    val bestSeasonGoals: Int = 0,
+    val peakRating: Int = 0,
+    val trophies: Map<Trophy, Int> = emptyMap(),
+    val awards: Map<Award, Int> = emptyMap(),
+    /** Club name to the seasons played there. */
+    val clubs: Map<String, Tally> = emptyMap(),
+    val leagues: Map<League, Int> = emptyMap(),
+    val careers: Int = 0,
+)
+
+@Serializable
+data class CareerModeStats(
+    val manager: ManagerTotals = ManagerTotals(),
+    val player: PlayerTotals = PlayerTotals(),
+)

@@ -78,7 +78,11 @@ class DraftFlowTest {
         appointGafferIfAsked()
 
         rule.onNodeWithTag("play").performClick()
-        waitFor(hasTestTag("skip"))
+        // Matches wait for a tap, one at a time, with the latest one up top.
+        waitFor(hasTestTag("next_match") and isEnabled())
+        rule.onNodeWithTag("next_match").performClick()
+        rule.onNodeWithTag("next_match").performClick()
+        rule.onNodeWithTag("latest_match").assertIsDisplayed()
         rule.onNodeWithTag("skip").performClick()
         waitFor(hasTestTag("menu"))
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasTestTag("highlights"))
@@ -93,6 +97,12 @@ class DraftFlowTest {
         rule.onNodeWithTag("stats_overview").assertIsDisplayed()
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasTestTag("stats_recent"))
         rule.onNodeWithTag("stats_recent").assertIsDisplayed()
+
+        // The run opens again, played back for its stats.
+        rule.onAllNodesWithTag("recent_run").onFirst().performClick()
+        waitFor(hasTestTag("result_detail"))
+        rule.onNodeWithTag("result_detail").performScrollToNode(hasTestTag("verdict"))
+        rule.onNodeWithTag("verdict").assertIsDisplayed()
     }
 
     @Test

@@ -114,6 +114,25 @@ object ProCareer {
 
     fun seasonSeed(state: ProState): Long = Random(state.seed + state.season * 7919L).nextLong()
 
+    /** The career as it stood when a booked season was played. */
+    fun stateAt(state: ProState, booked: ProSeason): ProState = state.copy(
+        season = booked.season,
+        age = booked.age,
+        rating = booked.ratingBefore,
+        club = booked.club,
+        league = booked.league,
+    )
+
+    /** Same as [Dynasty.replay]: every booked season can be played again, from the squad it was played with. */
+    fun replay(state: ProState, booked: ProSeason, simulator: SeasonSimulator): ReplayedRun? {
+        val squad = ClubSeasons.squad(booked.squadId) ?: return null
+        val then = stateAt(state, booked)
+        val session = session(then, squad)
+        val result = (simulator.simulate(session, seasonSeed(then)) as? Simulation.Complete)?.result ?: return null
+        val finish = result.verdict as? Verdict.LeagueFinish ?: return null
+        return if (finish.position == booked.position) ReplayedRun(session, result) else null
+    }
+
     private fun offer(state: ProState, squad: ClubSeason) = Offer(
         squadId = squad.id,
         club = squad.club,
@@ -270,6 +289,12 @@ object ProCareer {
         return state.copy(phase = ProPhase.TRANSFERS, offers = offers)
     }
 
+    /** Staying put, shown like an offer: the club next season and whether the player would start there. */
+    fun stayOffer(state: ProState): Offer? {
+        val next = state.copy(season = state.season + 1)
+        return clubSquad(state.club, next.year)?.let { offer(next, it) }
+    }
+
     /** Next season at the [offer]'s club, or at the current one when it's null. */
     fun nextSeason(state: ProState, offer: Offer?): ProState = state.copy(
         season = state.season + 1,
@@ -293,5 +318,6 @@ object ProCareer {
         awards = state.history.sumOf { it.awards.size },
         clubs = state.history.map { it.club }.distinct(),
         leagues = state.history.map { it.league }.distinct().size,
+        awardCounts = state.awardCounts,
     )
 }

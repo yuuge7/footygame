@@ -1,11 +1,13 @@
 package com.example.footygame.game
 
 import com.example.footygame.data.ClubSeasons
+import com.example.footygame.models.Award
 import com.example.footygame.models.DraftPick
 import com.example.footygame.models.Formation
 import com.example.footygame.models.League
 import com.example.footygame.models.Position
 import com.example.footygame.models.ProPhase
+import com.example.footygame.models.ProSeason
 import com.example.footygame.models.ProState
 import com.example.footygame.models.SeasonPhase
 import org.junit.Assert.assertEquals
@@ -34,6 +36,33 @@ class ProCareerTest {
             val median = strengths[strengths.size / 2]
             state.offers.forEach { assertTrue("${it.club} ${it.strength}", it.strength <= median + 1) }
         }
+    }
+
+    @Test
+    fun stayingSaysWhetherThePlayerWouldStartNextSeason() {
+        val signed = newCareer().let { ProCareer.chooseFirstClub(it, it.offers.first()) }
+        listOf(50, 75, 99).forEach { rating ->
+            val summer = ProCareer.transfers(signed.copy(rating = rating))
+            val stay = ProCareer.stayOffer(summer)!!
+            val next = summer.copy(season = summer.season + 1)
+            assertEquals(summer.club, stay.club)
+            assertEquals(ProCareer.clubSquad(summer.club, next.year)!!.id, stay.squadId)
+            assertEquals(ProCareer.starts(next, ProCareer.clubSquad(summer.club, next.year)!!), stay.starter)
+        }
+        assertTrue(ProCareer.stayOffer(ProCareer.transfers(signed.copy(rating = 99)))!!.starter)
+        assertFalse(ProCareer.stayOffer(ProCareer.transfers(signed.copy(rating = 50)))!!.starter)
+    }
+
+    @Test
+    fun aLegacyKeepsEachAwardAndHowOftenItWasWon() {
+        val season = ProSeason(
+            season = 1, age = 20, club = "Test FC", squadId = "tst-2003", starter = true, appearances = 40, goals = 30,
+            ratingBefore = 88, ratingAfter = 90, position = 1,
+            awards = listOf(Award.GOLDEN_BOOT, Award.YOUNG_PLAYER),
+        )
+        val legacy = ProCareer.legacy(newCareer().copy(history = listOf(season, season.copy(season = 2, awards = listOf(Award.GOLDEN_BOOT)))))
+        assertEquals(mapOf(Award.GOLDEN_BOOT to 2, Award.YOUNG_PLAYER to 1), legacy.awardCounts)
+        assertEquals(3, legacy.awards)
     }
 
     @Test

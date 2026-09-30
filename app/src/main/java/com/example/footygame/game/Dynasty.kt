@@ -60,9 +60,7 @@ object Dynasty {
     fun seasonSeed(state: DynastyState): Long = Random(state.seed + state.season).nextLong()
 
     fun picks(squad: List<SquadMember>): Map<String, DraftPick> = squad.mapNotNull { member ->
-        val clubSeason = ClubSeasons.squad(member.squadId) ?: return@mapNotNull null
-        val player = clubSeason.players.firstOrNull { it.id == member.playerId } ?: return@mapNotNull null
-        member.slotId to DraftPick(player.copy(rating = member.rating), clubSeason)
+        ClubSeasons.pick(member.squadId, member.playerId, member.rating)?.let { member.slotId to it }
     }.toMap()
 
     /** The XI as a finished draft, the shape the season simulator plays. */
@@ -81,6 +79,22 @@ object Dynasty {
         fromYear = CareerCurve.seasonYear(pick.clubSeason),
         joinedSeason = season,
     )
+
+    /** The dynasty as it stood when a booked season was played: its XI and its January gamble. */
+    fun stateAt(state: DynastyState, booked: DynastySeason): DynastyState =
+        state.copy(season = booked.season, squad = booked.squad, january = booked.january)
+
+    /**
+     * A booked season played again the way it was played live, for its stats. Null for seasons booked before
+     * their XI was kept, or when the season no longer ends the way it was booked.
+     */
+    fun replay(state: DynastyState, booked: DynastySeason, simulator: SeasonSimulator): ReplayedRun? {
+        val then = stateAt(state, booked)
+        val session = session(then).takeIf { booked.squad.isNotEmpty() && it.isComplete } ?: return null
+        val result = (simulator.simulate(session, seasonSeed(then), then.january) as? Simulation.Complete)?.result ?: return null
+        val finish = result.verdict as? Verdict.LeagueFinish ?: return null
+        return if (finish.position == booked.position && finish.points == booked.points) ReplayedRun(session, result) else null
+    }
 
     /** Kick-off of a season: the board looks at the XI and sets its target. */
     fun preseason(state: DynastyState): DynastyState = state.copy(
@@ -112,6 +126,8 @@ object Dynasty {
             confidenceAfter = after,
             topScorer = top?.player?.name,
             topScorerGoals = top?.goals ?: 0,
+            squad = state.squad,
+            january = state.january,
         )
         return state.copy(
             seasonPhase = SeasonPhase.REVIEW,

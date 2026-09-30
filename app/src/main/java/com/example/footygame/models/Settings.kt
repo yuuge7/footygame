@@ -1,5 +1,7 @@
 package com.example.footygame.models
 
+import kotlinx.serialization.Serializable
+
 enum class Difficulty(val respins: Int, val hidesRatings: Boolean) {
     EASY(respins = 3, hidesRatings = false),
     NORMAL(respins = 1, hidesRatings = false),
@@ -23,6 +25,7 @@ enum class RatingMode {
 }
 
 /** Inclusive range of season start years (or tournament years) a spin can land on. */
+@Serializable
 data class EraRange(val from: Int, val to: Int) {
     operator fun contains(year: Int): Boolean = year in from..to
 }
@@ -35,6 +38,7 @@ enum class EraPreset(val fromYear: Int) {
     MODERN(2016),
 }
 
+@Serializable
 data class DraftSettings(
     val formation: Formation = Formation.F433,
     val difficulty: Difficulty = Difficulty.NORMAL,
@@ -74,4 +78,5 @@ enum class ManagerTrait {
     TACTICIAN,
 }
 
+@Serializable
 data class Manager(val id: String, val name: String, val trait: ManagerTrait)

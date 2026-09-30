@@ -5,6 +5,9 @@ import com.example.footygame.models.CareerStats
 import com.example.footygame.models.DraftMode
 import com.example.footygame.models.DraftSettings
 import com.example.footygame.models.Formation
+import com.example.footygame.models.Manager
+import com.example.footygame.models.ManagerTrait
+import com.example.footygame.models.RatingMode
 import com.example.footygame.models.ModeTotals
 import com.example.footygame.models.Scoreline
 import com.example.footygame.models.Tally
@@ -25,6 +28,35 @@ class CareerTest {
             val result = (simulator.simulate(session, seed) as Simulation.Complete).result
             result to session
         }
+
+    @Test
+    fun aStoredRunPlaysBackTheSameWithPrimeRatingsAManagerAndJanuary() {
+        val settings = DraftSettings(ratingMode = RatingMode.PRIME, januaryWindow = true, europeanNights = true)
+        val session = completeSession(DraftMode.EPL, settings, manager = Manager("pep", "Pep", ManagerTrait.TACTICIAN))
+        val window = simulator.simulate(session, 11) as Simulation.TransferWindow
+        val result = (simulator.simulate(session, 11, window.offers.first()) as Simulation.Complete).result
+
+        val stats = CareerStats().withRun(result, session, seed = 11)
+        // Through JSON, the way the record book is saved.
+        val json = Json { ignoreUnknownKeys = true }
+        val summary = json.decodeFromString<CareerStats>(json.encodeToString(stats)).recent.first()
+        val replayed = summary.replayed(simulator)!!
+
+        assertEquals(result, replayed.result)
+        // The same player at the same rating in every slot, from the same squad.
+        assertEquals(session.picks.mapValues { it.value.player }, replayed.session.picks.mapValues { it.value.player })
+        assertEquals(session.picks.mapValues { it.value.clubSeason.id }, replayed.session.picks.mapValues { it.value.clubSeason.id })
+    }
+
+    @Test
+    fun aRunWithoutASeedOrWithAMissingSquadDoesNotPlayBack() {
+        val (result, session) = play(DraftMode.WC, 3)
+        assertEquals(null, CareerStats().withRun(result, session).recent.first().replayed(simulator))
+
+        val summary = CareerStats().withRun(result, session, seed = 3).recent.first()
+        val broken = summary.copy(replay = summary.replay!!.copy(picks = summary.replay.picks.mapValues { it.value.copy(squadId = "gone-1900") }))
+        assertEquals(null, broken.replayed(simulator))
+    }
 
     @Test
     fun aRunAddsItsMatchesGoalsAndPicks() {

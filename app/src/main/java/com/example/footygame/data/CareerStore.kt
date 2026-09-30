@@ -2,6 +2,7 @@ package com.example.footygame.data
 
 import android.content.Context
 import androidx.core.content.edit
+import com.example.footygame.models.CareerModeStats
 import com.example.footygame.models.DynastyState
 import com.example.footygame.models.Legacy
 import com.example.footygame.models.ProState
@@ -10,7 +11,7 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
-/** The career in progress for each career mode, and the finished ones for the hall of fame. */
+/** The career in progress for each career mode, the finished ones for the hall of fame, and the record book of both. */
 interface CareerStore {
     fun loadDynasty(): DynastyState?
     fun saveDynasty(state: DynastyState?)
@@ -18,6 +19,8 @@ interface CareerStore {
     fun savePro(state: ProState?)
     fun loadLegacies(): List<Legacy>
     fun saveLegacies(legacies: List<Legacy>)
+    fun loadStats(): CareerModeStats
+    fun saveStats(stats: CareerModeStats)
 }
 
 class SharedPreferencesCareerStore(context: Context) : CareerStore {
@@ -37,6 +40,10 @@ class SharedPreferencesCareerStore(context: Context) : CareerStore {
     override fun loadLegacies(): List<Legacy> = read(LEGACIES, ListSerializer(Legacy.serializer())).orEmpty()
 
     override fun saveLegacies(legacies: List<Legacy>) = write(LEGACIES, ListSerializer(Legacy.serializer()), legacies)
+
+    override fun loadStats(): CareerModeStats = read(STATS, CareerModeStats.serializer()) ?: CareerModeStats()
+
+    override fun saveStats(stats: CareerModeStats) = write(STATS, CareerModeStats.serializer(), stats)
 
     /** A save that can't be read any more (e.g. an enum renamed between versions) starts over rather than crash. */
     private fun <T> read(key: String, serializer: KSerializer<T>): T? {
@@ -60,5 +67,6 @@ class SharedPreferencesCareerStore(context: Context) : CareerStore {
         const val DYNASTY = "dynasty"
         const val PRO = "pro"
         const val LEGACIES = "legacies"
+        const val STATS = "stats"
     }
 }

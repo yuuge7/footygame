@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -53,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.example.footygame.R
 import com.example.footygame.game.RunHighlights
+import com.example.footygame.game.shortNames
 import com.example.footygame.models.DraftSession
 import com.example.footygame.models.CupRun
 import com.example.footygame.models.JanuaryEvent
@@ -95,6 +95,9 @@ fun SimulationScreen(
     run: RunState,
     session: DraftSession,
     onSkip: () -> Unit,
+    autoPlay: Boolean,
+    onNextMatch: () -> Unit,
+    onToggleAutoPlay: () -> Unit,
     onChooseJanuary: (JanuaryEvent) -> Unit,
     onPlayEurope: () -> Unit,
     onRunItBack: () -> Unit,
@@ -106,10 +109,7 @@ fun SimulationScreen(
     val shown = run.matches.take(run.revealed)
     val complete = run.isRevealComplete
     val listState = remember(run.seed) { LazyListState() }
-    val names = remember(session, result) {
-        (session.picks.values.map { it.player } + listOfNotNull(result?.january?.signed?.player))
-            .associate { it.id to it.shortName }
-    }
+    val names = remember(session, result) { session.shortNames(result) }
 
     LaunchedEffect(run.seed, run.revealed, complete) {
         when {
@@ -140,7 +140,13 @@ fun SimulationScreen(
 
             // Pinned while matches tick in; once the run is over it scrolls away with the summary to give results room.
             if (!complete) {
-                Scoreboard(shown, run.mode.matches, Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                Scoreboard(shown, run.mode.matches, Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp))
+                LatestMatchCard(
+                    shown = shown,
+                    upcoming = run.matches.getOrNull(shown.size),
+                    names = names,
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp),
+                )
             }
 
             LazyColumn(
@@ -153,25 +159,22 @@ fun SimulationScreen(
                 if (complete && result != null) {
                     item(key = "scoreboard") { Scoreboard(shown, run.mode.matches, Modifier.padding(bottom = 16.dp)) }
                     item(key = "verdict") { VerdictCard(result, run.isNewBest) }
-                    // Europe is its own screen: invited here until played, then its result.
+                    // The season's stats come first; Europe is its own screen, invited after them until played.
+                    seasonStats(result)
                     result.europe?.let { europe ->
                         item(key = "europe") {
                             if (run.europeSeen) {
                                 CupCard(
                                     europe,
                                     Modifier
-                                        .padding(top = 16.dp)
+                                        .padding(top = 24.dp)
                                         .testTag("europe"),
                                 )
                             } else {
-                                CupInvite(europe.competition, onPlayEurope, Modifier.padding(top = 16.dp))
+                                CupInvite(europe.competition, onPlayEurope, Modifier.padding(top = 24.dp))
                             }
                         }
                     }
-                    item(key = "summary") { SummaryStats(result) }
-                    item(key = "highlights") { Highlights(result) }
-                    if (result.table.isNotEmpty()) item(key = "table") { TablePreview(result.table) }
-                    if (result.topScorers.isNotEmpty()) item(key = "scorers") { TopScorers(result) }
                     item(key = "fixtures_header") {
                         Eyebrow(stringResource(R.string.summary_fixtures), modifier = Modifier.padding(top = 24.dp, bottom = 4.dp))
                     }
@@ -194,8 +197,8 @@ fun SimulationScreen(
                 }
             }
 
-            if (complete) {
-                Surface(color = Dugout, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
+            Surface(color = Dugout, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
+                if (complete) {
                     Column(
                         Modifier
                             .fillMaxWidth()
@@ -223,9 +226,15 @@ fun SimulationScreen(
                             Text(stringResource(R.string.action_menu), color = ChalkMuted)
                         }
                     }
+                } else {
+                    RevealControls(
+                        started = shown.isNotEmpty(),
+                        canPlay = run.revealed < run.matches.size,
+                        autoPlay = autoPlay,
+                        onNext = onNextMatch,
+                        onToggleAutoPlay = onToggleAutoPlay,
+                    )
                 }
-            } else {
-                Spacer(Modifier.navigationBarsPadding())
             }
         }
         // Perfect runs and trophies rain confetti over the results, like the final whistle of a title win.
@@ -241,7 +250,7 @@ fun SimulationScreen(
 
 /** The result. A flawless run gets the full scoreboard treatment: the record huge in pink and gold. */
 @Composable
-private fun VerdictCard(result: RunResult, isNewBest: Boolean) {
+fun VerdictCard(result: RunResult, isNewBest: Boolean) {
     val golden = result.isFlawless || result.wonTrophy
 
     Column(

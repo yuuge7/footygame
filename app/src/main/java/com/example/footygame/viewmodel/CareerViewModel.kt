@@ -11,24 +11,31 @@ import com.example.footygame.game.CareerCurve
 import com.example.footygame.game.DraftEngine
 import com.example.footygame.game.Dynasty
 import com.example.footygame.game.ProCareer
+import com.example.footygame.game.ReplayedRun
 import com.example.footygame.game.SeasonSimulator
 import com.example.footygame.game.Simulation
+import com.example.footygame.game.withLegacy
+import com.example.footygame.game.withSeason
+import com.example.footygame.models.CareerModeStats
 import com.example.footygame.models.Difficulty
 import com.example.footygame.models.DraftMode
 import com.example.footygame.models.DraftSession
 import com.example.footygame.models.DraftSettings
 import com.example.footygame.models.DraftStyle
 import com.example.footygame.models.DynastyPhase
+import com.example.footygame.models.DynastySeason
 import com.example.footygame.models.DynastyState
 import com.example.footygame.models.Formation
 import com.example.footygame.models.JanuaryEvent
 import com.example.footygame.models.League
 import com.example.footygame.models.Legacy
+import com.example.footygame.models.LegacyKind
 import com.example.footygame.models.ManagerTrait
 import com.example.footygame.models.MatchResult
 import com.example.footygame.models.Offer
 import com.example.footygame.models.Position
 import com.example.footygame.models.ProPhase
+import com.example.footygame.models.ProSeason
 import com.example.footygame.models.ProState
 import com.example.footygame.models.RunResult
 import com.example.footygame.models.SeasonPhase
@@ -57,7 +64,20 @@ data class CareerUiState(
     val proSeason: SeasonView? = null,
     /** Finished careers, newest first. */
     val legacies: List<Legacy> = emptyList(),
-)
+    /** The record book of both career modes. */
+    val stats: CareerModeStats = CareerModeStats(),
+) {
+    /**
+     * Seasons played in each mode, counted in the stats or not: the hall of fame's plus the career under way.
+     * More than the stats hold means some came before the stats did.
+     */
+    val managerSeasonsPlayed: Int
+        get() = legacies.filter { it.kind == LegacyKind.MANAGER }.sumOf { it.seasons } +
+            (dynasty?.takeIf { it.phase != DynastyPhase.FINISHED }?.history?.size ?: 0)
+    val playerSeasonsPlayed: Int
+        get() = legacies.filter { it.kind == LegacyKind.PLAYER }.sumOf { it.seasons } +
+            (pro?.takeIf { it.phase != ProPhase.RETIRED }?.history?.size ?: 0)
+}
 
 /**
  * Both career modes. Careers are saved after every step; a season is never stored, only its seed, so it's
@@ -86,6 +106,7 @@ class CareerViewModel(
             pro = pro,
             proSeason = pro?.let(::proSeasonFor),
             legacies = store.loadLegacies(),
+            stats = store.loadStats(),
         )
     }
 
@@ -156,7 +177,15 @@ class CareerViewModel(
         val state = _uiState.value.dynasty?.takeIf { it.phase == DynastyPhase.SEASON } ?: return null
         val result = _uiState.value.dynastySeason?.result ?: return null
         val next = nextPhase(state.seasonPhase, result) ?: return null
-        saveDynasty(if (next == SeasonPhase.REVIEW) Dynasty.review(state, result) else state.copy(seasonPhase = next))
+        if (next == SeasonPhase.REVIEW) {
+            val reviewed = Dynasty.review(state, result)
+            reviewed.history.lastOrNull()?.let { season ->
+                updateStats { it.copy(manager = it.manager.withSeason(result, Dynasty.session(state), season)) }
+            }
+            saveDynasty(reviewed)
+        } else {
+            saveDynasty(state.copy(seasonPhase = next))
+        }
         return next
     }
 
@@ -197,6 +226,10 @@ class CareerViewModel(
         store.saveDynasty(null)
         _uiState.update { it.copy(dynasty = null, dynastySeason = null, dynastyDraft = null, signingSlotId = null) }
     }
+
+    /** A booked dynasty season played again, for its stats; see [Dynasty.replay]. */
+    fun replayDynastySeason(booked: DynastySeason): ReplayedRun? =
+        _uiState.value.dynasty?.let { Dynasty.replay(it, booked, simulator) }
 
     private fun engine() = if (_uiState.value.signingSlotId != null) signingEngine else draftEngine
 
@@ -242,7 +275,9 @@ class CareerViewModel(
         val next = nextPhase(state.seasonPhase, result) ?: return null
         if (next == SeasonPhase.REVIEW) {
             val squad = ProCareer.clubSquad(state.club, state.year) ?: return null
-            savePro(ProCareer.review(state, ProCareer.report(state, squad, result)))
+            val report = ProCareer.report(state, squad, result)
+            updateStats { it.copy(player = it.player.withSeason(report)) }
+            savePro(ProCareer.review(state, report))
         } else {
             savePro(state.copy(seasonPhase = next))
         }
@@ -283,6 +318,9 @@ class CareerViewModel(
         _uiState.update { it.copy(pro = null, proSeason = null) }
     }
 
+    /** Same as [replayDynastySeason], for the player career. */
+    fun replayProSeason(booked: ProSeason): ReplayedRun? = _uiState.value.pro?.let { ProCareer.replay(it, booked, simulator) }
+
     private fun savePro(state: ProState) {
         store.savePro(state)
         _uiState.update { it.copy(pro = state, proSeason = proSeasonFor(state)) }
@@ -301,6 +339,18 @@ class CareerViewModel(
         val legacies = (listOf(legacy) + _uiState.value.legacies).take(MAX_LEGACIES)
         store.saveLegacies(legacies)
         _uiState.update { it.copy(legacies = legacies) }
+        updateStats {
+            when (legacy.kind) {
+                LegacyKind.MANAGER -> it.copy(manager = it.manager.withLegacy(legacy))
+                LegacyKind.PLAYER -> it.copy(player = it.player.withLegacy())
+            }
+        }
+    }
+
+    private inline fun updateStats(transform: (CareerModeStats) -> CareerModeStats) {
+        val stats = transform(_uiState.value.stats)
+        store.saveStats(stats)
+        _uiState.update { it.copy(stats = stats) }
     }
 
     companion object {
