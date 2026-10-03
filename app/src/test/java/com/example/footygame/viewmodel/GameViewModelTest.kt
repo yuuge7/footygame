@@ -88,12 +88,12 @@ class GameViewModelTest {
     fun aGafferMustBeAppointedBeforePlaying() {
         startDraft(DraftMode.EPL, quick.copy(managers = true))
         draftEveryone()
-        viewModel.simulate(animate = false)
+        viewModel.simulate()
         assertNull(viewModel.uiState.value.run)
 
         val option = viewModel.uiState.value.draft!!.managerOptions.first()
         viewModel.appointManager(option.id)
-        viewModel.simulate(animate = false)
+        viewModel.simulate()
         assertEquals(option, viewModel.uiState.value.run!!.result!!.manager)
     }
 
@@ -101,11 +101,13 @@ class GameViewModelTest {
     fun simulatingSavesTheRecord() {
         startDraft(DraftMode.EPL, quick)
         draftEveryone()
-        viewModel.simulate(animate = false)
+        viewModel.simulate()
 
+        // Decided and saved at once, while every match still waits to be shown.
         val run = viewModel.uiState.value.run
         assertNotNull(run)
-        assertTrue(run!!.isRevealComplete)
+        assertEquals(0, run!!.revealed)
+        assertFalse(run.isRevealComplete)
         assertFalse(run.isNewBest)
         assertEquals(1, records.saved.getValue(DraftMode.EPL).runs)
         assertEquals(1, viewModel.uiState.value.records.getValue(DraftMode.EPL).runs)
@@ -122,7 +124,8 @@ class GameViewModelTest {
     fun januaryWindowHoldsTheRunUntilAGambleIsChosen() {
         startDraft(DraftMode.EPL, quick.copy(januaryWindow = true))
         draftEveryone()
-        viewModel.simulate(animate = false)
+        viewModel.simulate()
+        viewModel.skipReveal()
 
         val paused = viewModel.uiState.value.run!!
         assertTrue(paused.isAwaitingJanuary)
@@ -132,6 +135,7 @@ class GameViewModelTest {
         assertTrue(records.saved.isEmpty())
 
         viewModel.chooseJanuary(paused.januaryOffers.first())
+        viewModel.skipReveal()
         val finished = viewModel.uiState.value.run!!
         assertTrue(finished.isRevealComplete)
         assertEquals(38, finished.matches.size)
@@ -141,10 +145,38 @@ class GameViewModelTest {
     }
 
     @Test
+    fun theSeasonNeverJumpsToTheWindowOrTheEndOnItsOwn() = runTest(dispatcher) {
+        startDraft(DraftMode.EPL, quick.copy(januaryWindow = true))
+        draftEveryone()
+        viewModel.simulate()
+        advanceUntilIdle()
+        assertEquals(0, viewModel.uiState.value.run!!.revealed)
+
+        // The window opens with the tap that shows the 19th match, not before.
+        repeat(18) { viewModel.nextMatch() }
+        assertFalse(viewModel.uiState.value.run!!.isAwaitingJanuary)
+        viewModel.chooseJanuary(viewModel.uiState.value.run!!.januaryOffers.first())
+        assertNull(viewModel.uiState.value.run!!.result)
+        viewModel.nextMatch()
+        val paused = viewModel.uiState.value.run!!
+        assertTrue(paused.isAwaitingJanuary)
+
+        // The second half is decided with the gamble, and still shown one tap at a time.
+        viewModel.chooseJanuary(paused.januaryOffers.first())
+        advanceUntilIdle()
+        assertEquals(19, viewModel.uiState.value.run!!.revealed)
+        assertFalse(viewModel.uiState.value.run!!.isRevealComplete)
+        repeat(18) { viewModel.nextMatch() }
+        assertFalse(viewModel.uiState.value.run!!.isRevealComplete)
+        viewModel.nextMatch()
+        assertTrue(viewModel.uiState.value.run!!.isRevealComplete)
+    }
+
+    @Test
     fun revealGoesMatchByMatchUntilAutoPlayTakesOver() = runTest(dispatcher) {
         startDraft(DraftMode.WC, quick)
         draftEveryone()
-        viewModel.simulate(animate = true)
+        viewModel.simulate()
         advanceUntilIdle()
         // Nothing moves on its own: each match waits for a tap.
         assertEquals(0, viewModel.uiState.value.run!!.revealed)
@@ -158,7 +190,7 @@ class GameViewModelTest {
         assertTrue(viewModel.uiState.value.run!!.isRevealComplete)
 
         // Auto play stays chosen for the next run, and Skip still jumps to the end.
-        viewModel.simulate(animate = true)
+        viewModel.simulate()
         assertTrue(AutoPlay.on.value)
         assertEquals(0, viewModel.uiState.value.run!!.revealed)
         viewModel.skipReveal()
@@ -170,7 +202,7 @@ class GameViewModelTest {
     fun nextMatchNeverRunsPastWhatIsKnown() {
         startDraft(DraftMode.WC, quick)
         draftEveryone()
-        viewModel.simulate(animate = true)
+        viewModel.simulate()
         val total = viewModel.uiState.value.run!!.matches.size
         repeat(total + 3) { viewModel.nextMatch() }
         assertEquals(total, viewModel.uiState.value.run!!.revealed)
@@ -181,7 +213,8 @@ class GameViewModelTest {
     fun aRecentRunPlaysBackMatchForMatch() {
         startDraft(DraftMode.EPL, quick.copy(januaryWindow = true, europeanNights = true))
         draftEveryone()
-        viewModel.simulate(animate = false)
+        viewModel.simulate()
+        viewModel.skipReveal()
         val paused = viewModel.uiState.value.run!!
         viewModel.chooseJanuary(paused.januaryOffers.last())
         val played = viewModel.uiState.value.run!!.result!!
@@ -198,7 +231,7 @@ class GameViewModelTest {
     fun revealStopsAtTheWindowAndCarriesOnAfterTheChoice() = runTest(dispatcher) {
         startDraft(DraftMode.EPL, quick.copy(januaryWindow = true))
         draftEveryone()
-        viewModel.simulate(animate = true)
+        viewModel.simulate()
         viewModel.toggleAutoPlay()
         advanceUntilIdle()
         val paused = viewModel.uiState.value.run!!
@@ -216,7 +249,7 @@ class GameViewModelTest {
     fun newDraftClearsTheRunAndKeepsTheSetup() {
         startDraft(DraftMode.UCL, quick.copy(formation = Formation.F352))
         draftEveryone()
-        viewModel.simulate(animate = false)
+        viewModel.simulate()
         viewModel.startDraft()
 
         val state = viewModel.uiState.value
@@ -228,7 +261,7 @@ class GameViewModelTest {
     @Test
     fun cannotSimulateAnIncompleteXi() {
         startDraft(DraftMode.EPL, quick)
-        viewModel.simulate(animate = false)
+        viewModel.simulate()
         assertNull(viewModel.uiState.value.run)
         assertTrue(records.saved.isEmpty())
         assertEquals(0, stats.saved.recent.size)

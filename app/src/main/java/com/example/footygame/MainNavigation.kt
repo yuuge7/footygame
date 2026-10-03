@@ -32,7 +32,6 @@ import com.example.footygame.ui.SetupScreen
 import com.example.footygame.ui.SimulationScreen
 import com.example.footygame.ui.StatsScreen
 import com.example.footygame.ui.targetLabel
-import com.example.footygame.ui.components.rememberReducedMotion
 import com.example.footygame.viewmodel.AutoPlay
 import com.example.footygame.viewmodel.CareerViewModel
 import com.example.footygame.viewmodel.GameViewModel
@@ -98,7 +97,6 @@ fun MainNavigation(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val career by careers.uiState.collectAsStateWithLifecycle()
     val autoPlay by AutoPlay.on.collectAsStateWithLifecycle()
-    val reducedMotion = rememberReducedMotion()
     val pop = { key: NavKey -> if (backStack.isAt(key)) backStack.removeAt(backStack.lastIndex) }
 
     // Screens stay on screen while they animate out, so every action first checks its screen is still
@@ -195,7 +193,7 @@ fun MainNavigation(
                         onAppointManager = viewModel::appointManager,
                         onPlay = {
                             if (backStack.isAt(DraftScreenKey)) {
-                                viewModel.simulate(animate = !reducedMotion)
+                                viewModel.simulate()
                                 backStack.add(SimulationScreenKey)
                             }
                         },
@@ -221,9 +219,7 @@ fun MainNavigation(
                         onNextMatch = viewModel::nextMatch,
                         onToggleAutoPlay = viewModel::toggleAutoPlay,
                         onPlayEurope = { if (backStack.isAt(SimulationScreenKey)) backStack.add(EuropeScreenKey) },
-                        onRunItBack = {
-                            if (backStack.isAt(SimulationScreenKey)) viewModel.simulate(animate = !reducedMotion)
-                        },
+                        onRunItBack = { if (backStack.isAt(SimulationScreenKey)) viewModel.simulate() },
                         onNewDraft = {
                             if (backStack.isAt(SimulationScreenKey)) {
                                 viewModel.startDraft()

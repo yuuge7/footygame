@@ -1,5 +1,6 @@
 package com.example.footygame
 
+import android.os.ParcelFileDescriptor
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
@@ -16,6 +17,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.example.footygame.models.DraftMode
 import org.junit.Assert.assertFalse
 import org.junit.Rule
@@ -130,6 +132,23 @@ class DraftFlowTest {
     }
 
     @Test
+    fun matchesWaitForATapEvenWithSystemAnimationsOff() = withSystemAnimationsOff {
+        openSetup(DraftMode.EPL)
+        tapSetting("style_SQUAD_FIRST")
+        startDraft()
+        repeat(11) { draftSquadFirst() }
+        appointGafferIfAsked()
+
+        rule.onNodeWithTag("play").performClick()
+        // A tap per match is the game's pace, not an animation: no jump to the January window or the end.
+        waitFor(hasTestTag("next_match") and isEnabled())
+        rule.onNodeWithText(played(0)).assertIsDisplayed()
+        assertFalse("Jumped to the January window", exists(hasTestTag("january_option")))
+        rule.onNodeWithTag("next_match").performClick()
+        rule.onNodeWithText(played(1)).assertIsDisplayed()
+    }
+
+    @Test
     fun leavingADraftWithPicksAsksFirstAndReturnsToSetup() {
         openSetup(DraftMode.EPL)
         tapSetting("style_SQUAD_FIRST")
@@ -195,11 +214,35 @@ class DraftFlowTest {
         waitFor(hasTestTag("play"))
     }
 
+    private fun played(matches: Int) = rule.activity.getString(R.string.run_progress, matches, DraftMode.EPL.matches)
+
+    /** Runs [block] as a phone with animations switched off in its settings would, then puts the setting back. */
+    private fun withSystemAnimationsOff(block: () -> Unit) {
+        val before = shell("settings get global $ANIMATOR_SCALE").trim()
+        shell("settings put global $ANIMATOR_SCALE 0")
+        try {
+            // The app reads the setting once per composition, so the activity starts over with it off.
+            rule.activityRule.scenario.recreate()
+            block()
+        } finally {
+            // "null" is a setting that was never written.
+            val restore = if (before == "null") "delete global $ANIMATOR_SCALE" else "put global $ANIMATOR_SCALE $before"
+            shell("settings $restore")
+        }
+    }
+
+    /** Reads the output to its end, which is also when the command has finished. */
+    private fun shell(command: String): String {
+        val output = InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(command)
+        return ParcelFileDescriptor.AutoCloseInputStream(output).use { it.readBytes().decodeToString() }
+    }
+
     private fun waitFor(matcher: SemanticsMatcher) = rule.waitUntil(TIMEOUT) { exists(matcher) }
 
     private fun exists(matcher: SemanticsMatcher) = rule.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()
 
     private companion object {
         const val TIMEOUT = 15_000L
+        const val ANIMATOR_SCALE = "animator_duration_scale"
     }
 }

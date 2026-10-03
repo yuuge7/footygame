@@ -1,7 +1,6 @@
 package com.example.footygame.game
 
 import com.example.footygame.data.ClubSeasons
-import com.example.footygame.models.ClubSeason
 import com.example.footygame.models.Difficulty
 import com.example.footygame.models.DraftMode
 import com.example.footygame.models.DraftSession
@@ -199,32 +198,30 @@ class DraftEngineTest {
     }
 
     @Test
-    fun englishModesLeanTowardsStrongSquads() {
-        for (mode in listOf(DraftMode.EPL, DraftMode.FAC)) {
-            val pool = ClubSeasons.poolFor(mode)
-            val strong = { squad: ClubSeason -> DraftEngine.strength(squad) >= STRONG }
-            val uniformShare = pool.count(strong) / pool.size.toDouble()
+    fun everyModeLeansTowardsStrongSquadsWithoutShuttingAnyoneOut() {
+        for (mode in DraftMode.entries) {
+            // The pool cut in quarters: each would get a quarter of the spins if every squad were as likely.
+            val strengths = ClubSeasons.poolFor(mode).map(DraftEngine::strength).sorted()
+            val weakLine = strengths[strengths.size / 4]
+            val strongLine = strengths[strengths.size * 3 / 4]
 
             val engine = DraftEngine(Random(11))
             var session = engine.start(mode, DraftSettings(difficulty = Difficulty.EASY))
             var strongSpins = 0
+            var weakSpins = 0
             repeat(SPINS) {
-                if (strong(session.spin!!)) strongSpins++
+                val strength = DraftEngine.strength(session.spin!!)
+                if (strength >= strongLine) strongSpins++
+                if (strength < weakLine) weakSpins++
                 session = engine.respin(session.copy(respinsLeft = 1))
             }
-            val share = strongSpins / SPINS.toDouble()
-            assertTrue("$mode strong share $share vs uniform $uniformShare", share > uniformShare * 1.5)
-            // Still a lean, not a lock: most spins are not title sides.
-            assertTrue("$mode strong share $share", share < 0.45)
+            val strong = strongSpins / SPINS.toDouble()
+            val weak = weakSpins / SPINS.toDouble()
+            assertTrue("$mode strongest quarter $strong", strong > 0.32)
+            // Still a lean, not a lock: most spins miss the strongest quarter, and the weakest keeps turning up.
+            assertTrue("$mode strongest quarter $strong", strong < 0.48)
+            assertTrue("$mode weakest quarter $weak", weak in 0.09..0.20)
         }
-    }
-
-    @Test
-    fun otherModesSpinEverySquadEvenly() {
-        assertFalse(DraftMode.UCL.favoursStrongSquads)
-        assertFalse(DraftMode.WC.favoursStrongSquads)
-        assertTrue(DraftMode.EPL.favoursStrongSquads)
-        assertTrue(DraftMode.FAC.favoursStrongSquads)
     }
 
     @Test
@@ -256,7 +253,6 @@ class DraftEngineTest {
     }
 
     private companion object {
-        const val STRONG = 84.0
         const val SPINS = 2_000
     }
 }

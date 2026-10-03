@@ -76,7 +76,6 @@ class GameViewModel(
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
     private var revealJob: Job? = null
-    private var animateReveal = true
 
     /** Loads the last setup used for this challenge. */
     fun openSetup(mode: DraftMode) {
@@ -109,11 +108,13 @@ class GameViewModel(
         return true
     }
 
-    /** Plays the XI through its competition. The run may stop at the January window for [chooseJanuary]. */
-    fun simulate(animate: Boolean) {
+    /**
+     * Plays the XI through its competition. The run may stop at the January window for [chooseJanuary].
+     * Nothing is revealed yet, with system animations off too: a tap per match is the pace, not an animation.
+     */
+    fun simulate() {
         val draft = _uiState.value.draft?.takeIf { it.isReadyToPlay } ?: return
         cancelReveal()
-        animateReveal = animate
         val seed = seeds.nextLong()
         advance(simulator.simulate(draft, seed), RunState(draft.mode, seed, matches = emptyList()))
     }
@@ -145,7 +146,7 @@ class GameViewModel(
     /** Lets the matches come in on their own, one every [AutoPlay.STEP_MS], or stops them. */
     fun toggleAutoPlay() {
         AutoPlay.toggle()
-        if (AutoPlay.on.value && animateReveal) startReveal() else cancelReveal()
+        if (AutoPlay.on.value) startReveal() else cancelReveal()
     }
 
     /** Plays a run from the record book again, for its stats. */
@@ -154,18 +155,12 @@ class GameViewModel(
     private fun advance(step: Simulation, run: RunState) {
         when (step) {
             is Simulation.TransferWindow -> _uiState.update {
-                it.copy(
-                    run = run.copy(
-                        matches = step.played,
-                        januaryOffers = step.offers,
-                        revealed = if (animateReveal) run.revealed else step.played.size,
-                    ),
-                )
+                it.copy(run = run.copy(matches = step.played, januaryOffers = step.offers))
             }
 
             is Simulation.Complete -> finish(step.result, run)
         }
-        if (animateReveal && AutoPlay.on.value) startReveal()
+        if (AutoPlay.on.value) startReveal()
     }
 
     /** Saves the record and the career stats as soon as the run is decided, whatever the reveal is doing. */
@@ -184,7 +179,6 @@ class GameViewModel(
                     matches = result.matches,
                     result = result,
                     januaryOffers = emptyList(),
-                    revealed = if (animateReveal) run.revealed else result.matches.size,
                     isNewBest = previous.runs > 0 && previous.isImprovedBy(result),
                 ),
             )

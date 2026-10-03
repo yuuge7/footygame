@@ -78,7 +78,8 @@ private val Particles = setOf("van", "von", "de", "der", "den", "da", "das", "di
 
 /**
  * True when the user has turned animations off in system settings. Compose animations already honour
- * that on their own; this is only for timed loops built on delay(), like the spin reel and match reveal.
+ * that on their own; this is only for motion timed by hand, like the spin reel and the confetti. The match
+ * reveal is not one of them: it moves at the player's taps, so it stays match by match.
  */
 @Composable
 fun rememberReducedMotion(): Boolean {

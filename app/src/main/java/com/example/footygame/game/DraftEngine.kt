@@ -71,7 +71,7 @@ class DraftEngine(
             .ifEmpty { poolFor(session.mode, session.settings.copy(era = null)).filter(fits) }
         val fresh = candidates.filter { it.id !in session.recentSpinIds && it.id != session.spin?.id }
         val choices = fresh.ifEmpty { candidates.filter { it.id != session.spin?.id } }.ifEmpty { candidates }
-        val next = if (session.mode.favoursStrongSquads) choices.weightedRandomOrNull() else choices.randomOrNull(random)
+        val next = choices.weightedRandomOrNull()
         return session.copy(
             spin = next,
             spinNumber = session.spinNumber + 1,
@@ -81,8 +81,10 @@ class DraftEngine(
 
     /**
      * Each rating point of [strength] above the weakest choice makes a squad [STRENGTH_ODDS] times as
-     * likely. Over the English pools that lifts title-calibre sides (84+) from about one spin in six to
-     * nearly one in three, while every squad keeps a chance.
+     * likely, in every mode: the pools hold whole league tables and every World Cup nation, far more
+     * strugglers than a perfect run can use. Title-calibre sides (84+) go from about one spin in six to
+     * nearly one in three in the English pools and from one in seven to one in four at the World Cup; the
+     * Champions League pool is tighter, so it leans least. Every squad keeps a chance.
      */
     private fun List<ClubSeason>.weightedRandomOrNull(): ClubSeason? {
         if (isEmpty()) return null

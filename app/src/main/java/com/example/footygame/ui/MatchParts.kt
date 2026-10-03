@@ -78,7 +78,6 @@ import com.example.footygame.ui.components.RecordNumbers
 import com.example.footygame.ui.components.ResultPill
 import com.example.footygame.ui.components.StatBlock
 import com.example.footygame.ui.components.panel
-import com.example.footygame.ui.components.rememberReducedMotion
 import com.example.footygame.viewmodel.AutoPlay
 import kotlinx.coroutines.delay
 
@@ -87,17 +86,15 @@ import kotlinx.coroutines.delay
 /**
  * How many of [total] matches are on screen: one more per tap on "Next match", or one every
  * [AutoPlay.STEP_MS] with auto play on. Keyed by [key] so a new competition starts from zero, and
- * saved so it survives recreation. With system animations off everything shows at once.
+ * saved so it survives recreation. System animations being off changes nothing here: the taps set the
+ * pace, so there is no animation to drop, and showing everything at once would skip the season.
  */
 @Composable
 fun rememberReveal(key: Any, total: Int): Reveal {
-    val reducedMotion = rememberReducedMotion()
-    val state = rememberSaveable(key) { mutableIntStateOf(if (reducedMotion) total else 0) }
+    val state = rememberSaveable(key) { mutableIntStateOf(0) }
     val autoState = AutoPlay.on.collectAsState()
     val auto by autoState
     LaunchedEffect(key, total, auto) {
-        // The league grows after the January window, so a reveal without animations catches up to it too.
-        if (reducedMotion) state.intValue = total
         while (auto && state.intValue < total) {
             delay(AutoPlay.STEP_MS)
             state.intValue++

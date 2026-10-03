@@ -53,9 +53,6 @@ enum class DraftMode(val matches: Int, val pools: Set<Pool>) {
 
     /** Only a league season can finish high enough to qualify for Europe. */
     val hasEuropeanNights: Boolean get() = this == EPL
-
-    /** Whole-table pools are three quarters mid-table and relegated sides, so their spins lean towards strong squads. */
-    val favoursStrongSquads: Boolean get() = Pool.ENGLISH_DOMESTIC in pools
 }
 
 /**
